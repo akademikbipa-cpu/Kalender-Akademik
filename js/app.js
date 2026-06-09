@@ -338,6 +338,7 @@ function openEventModal(eventData, dateStr) {
   });
 
   hideError(document.getElementById("event-error"));
+  _hideForceButton();
   State.editEventId = isEdit ? eventData.id : null;
   openModal("modal-event");
 }
@@ -378,10 +379,23 @@ async function saveEvent() {
     if (isEdit) payload.event_id = id;
 
     const res = await apiPost(payload);
-    if (res.status === "ok") {
+
+    if (res.status === "conflict") {
+      // Tampilkan warning bentrok
+      const list = res.conflicts.map(c =>
+        `• ${c.nama} (${c.mulai} s/d ${c.selesai})`
+      ).join("\n");
+      showError(errEl, `⚠️ Tanggal bentrok dengan event berikut:\n${list}\n\nKlik "Simpan Paksa" jika ingin tetap menyimpan.`);
+      errEl.style.whiteSpace = "pre-line";
+
+      // Tampilkan tombol simpan paksa
+      _showForceButton(payload);
+
+    } else if (res.status === "ok") {
       closeModal("modal-event");
       State.calendar.refetchEvents();
       showToast(isEdit ? "Kegiatan berhasil diupdate." : "Kegiatan berhasil ditambahkan.", "success");
+      _hideForceButton();
     } else {
       showError(errEl, res.message);
     }
@@ -389,6 +403,40 @@ async function saveEvent() {
     showError(errEl, "Gagal menyimpan data.");
   }
   setLoading("btn-save-event", false);
+}
+
+function _showForceButton(payload) {
+  let btn = document.getElementById("btn-force-save");
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.id        = "btn-force-save";
+    btn.className = "btn btn-warning";
+    btn.innerHTML = '<span class="iconify" data-icon="mdi:alert-outline"></span> Simpan Paksa';
+    document.querySelector(".modal-footer").insertBefore(
+      btn,
+      document.getElementById("btn-save-event")
+    );
+  }
+  btn.style.display = "inline-flex";
+  btn.onclick = async () => {
+    payload.force = true;
+    setLoading("btn-force-save", true);
+    try {
+      const res = await apiPost(payload);
+      if (res.status === "ok") {
+        closeModal("modal-event");
+        State.calendar.refetchEvents();
+        showToast("Event disimpan (override bentrok).", "success");
+        _hideForceButton();
+      }
+    } catch(e) {}
+    setLoading("btn-force-save", false);
+  };
+}
+
+function _hideForceButton() {
+  const btn = document.getElementById("btn-force-save");
+  if (btn) btn.style.display = "none";
 }
 
 async function deleteEvent() {
