@@ -32,10 +32,13 @@ async function apiGet(params = {}) {
 
 async function apiPost(body = {}) {
   body.token = State.token || "";
+  // GAS Web App harus menggunakan no-cors workaround:
+  // Kirim sebagai form parameter "payload" berisi JSON string
+  const formData = new FormData();
+  formData.append("payload", JSON.stringify(body));
   const res = await fetch(CONFIG.GAS_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: formData,
   });
   return res.json();
 }
