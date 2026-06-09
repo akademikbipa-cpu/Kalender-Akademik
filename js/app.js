@@ -53,6 +53,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupKategoriHandlers();
   setupOverrideHandlers();
   setupTahunAjaranHandlers();
+  setupExportHandler();
 
   updateAuthUI();
   await loadInitialData();
@@ -720,6 +721,17 @@ function deleteOverrideRow(id) {
     } else {
       showToast(res.message, "error");
     }
+  });
+}
+
+// ============================================================
+//  EXPORT PDF
+// ============================================================
+function setupExportHandler() {
+  document.getElementById("btn-export-pdf").addEventListener("click", () => {
+    const tahun = State.filter.tahun || CONFIG.DEFAULT_TAHUN_AJARAN;
+    const url   = `print.html?tahun=${encodeURIComponent(tahun)}`;
+    window.open(url, "_blank");
   });
 }
 

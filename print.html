@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kalender Akademik — Print</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="js/config.js"></script>
+  <style>
+    /* ============================================================
+       BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:   #0d1b2a;
+      --navy2:  #1b2d42;
+      --gold:   #e8c547;
+      --cream:  #f5f0e8;
+      --text:   #1b2d42;
+      --muted:  #7a8fa6;
+      --border: #dde3ea;
+      --font:   'Plus Jakarta Sans', sans-serif;
+      --mono:   'DM Mono', monospace;
+    }
+
+    body {
+      font-family: var(--font);
+      background: #e8e8e8;
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ============================================================
+       PRINT CONTROLS (tidak ikut tercetak)
+    ============================================================ */
+    .print-controls {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 999;
+      background: var(--navy);
+      color: #fff;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .print-controls h2 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--gold);
+      margin-right: 8px;
+    }
+
+    .ctrl-group {
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .ctrl-label {
+      font-size: 11px;
+      color: rgba(255,255,255,.6);
+      white-space: nowrap;
+    }
+
+    .ctrl-select, .ctrl-input {
+      font-family: var(--font);
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,.2);
+      background: rgba(255,255,255,.1);
+      color: #fff;
+      outline: none;
+    }
+
+    .ctrl-select option { background: var(--navy); }
+
+    .btn-print {
+      margin-left: auto;
+      background: var(--gold);
+      color: var(--navy);
+      border: none;
+      padding: 7px 18px;
+      border-radius: 8px;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-print:hover { background: #d4b03a; }
+
+    .btn-outline {
+      background: transparent;
+      color: rgba(255,255,255,.8);
+      border: 1px solid rgba(255,255,255,.2);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-outline:hover { background: rgba(255,255,255,.1); }
+
+    .loading-bar {
+      display: none;
+      font-size: 12px;
+      color: rgba(255,255,255,.7);
+    }
+
+    /* ============================================================
+       PRINT DOCUMENT
+    ============================================================ */
+    .print-doc {
+      margin-top: 56px;
+      max-width: 1280px;
+      margin-left: auto;
+      margin-right: auto;
+      background: var(--cream);
+    }
+
+    /* ---- HEADER ---- */
+    .doc-header {
+      background: var(--navy);
+      color: #fff;
+      padding: 36px 48px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .doc-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 20px,
+        rgba(255,255,255,.02) 20px,
+        rgba(255,255,255,.02) 40px
+      );
+    }
+
+    .header-logo-area {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo-circle {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      border: 2px solid var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .logo-text-inner {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--gold);
+      letter-spacing: 1px;
+    }
+
+    .header-text-area { display: flex; flex-direction: column; gap: 4px; }
+
+    .header-institution {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      color: rgba(255,255,255,.5);
+      text-transform: uppercase;
+    }
+
+    .header-title {
+      font-size: 38px;
+      font-weight: 800;
+      line-height: 1;
+      color: #fff;
+    }
+
+    .header-title span { color: var(--gold); }
+
+    .header-subtitle {
+      font-size: 13px;
+      color: rgba(255,255,255,.5);
+      margin-top: 4px;
+    }
+
+    .header-year {
+      font-size: 72px;
+      font-weight: 800;
+      line-height: .9;
+      color: rgba(255,255,255,.07);
+      text-align: right;
+      position: relative;
+      z-index: 1;
+      font-family: var(--font);
+      letter-spacing: -2px;
+    }
+
+    /* ---- SEMESTER TABS ---- */
+    .semester-tabs {
+      background: var(--navy2);
+      display: flex;
+      border-bottom: 2px solid rgba(255,255,255,.05);
+    }
+
+    .tab-btn {
+      padding: 14px 32px;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.4);
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .tab-btn.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+    }
+
+    /* ---- SEMESTER CONTENT ---- */
+    .semester-content { display: none; padding: 32px 48px; }
+    .semester-content.active { display: block; }
+
+    /* ---- SEMESTER TITLE ---- */
+    .sem-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sem-badge {
+      background: var(--navy);
+      color: var(--gold);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      margin-right: 12px;
+    }
+
+    .sem-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--navy);
+    }
+
+    .sem-range {
+      font-size: 13px;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ---- LEGEND ---- */
+    .legend-box {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+    }
+
+    .legend-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin-bottom: 10px;
+    }
+
+    .legend-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 24px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .legend-swatch {
+      width: 22px; height: 16px;
+      border-radius: 4px;
+      border: 1px solid rgba(0,0,0,.08);
+      flex-shrink: 0;
+    }
+
+    /* ---- RINGKASAN MINGGU ---- */
+    .ringkasan-box {
+      background: var(--navy);
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 28px;
+    }
+
+    .ringkasan-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .btn-edit-ringkasan {
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255,255,255,.5);
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 5px;
+      padding: 3px 9px;
+      cursor: pointer;
+      font-family: var(--font);
+    }
+    .btn-edit-ringkasan:hover { background: rgba(255,255,255,.15); color: #fff; }
+
+    .ringkasan-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      color: rgba(255,255,255,.85);
+      cursor: pointer;
+      transition: background .12s;
+    }
+    .chip:hover { background: rgba(255,255,255,.15); }
+
+    .chip-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .5px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+
+    /* Ringkasan edit mode */
+    .ringkasan-editor {
+      display: none;
+      margin-top: 12px;
+    }
+    .ringkasan-editor.open { display: block; }
+
+    .ringkasan-textarea {
+      width: 100%;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 8px;
+      color: #fff;
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 10px 12px;
+      resize: vertical;
+      min-height: 100px;
+      outline: none;
+    }
+    .ringkasan-textarea::placeholder { color: rgba(255,255,255,.3); }
+
+    .ringkasan-editor-hint {
+      font-size: 11px;
+      color: rgba(255,255,255,.4);
+      margin-top: 6px;
+    }
+
+    .btn-apply-ringkasan {
+      margin-top: 8px;
+      background: var(--gold);
+      color: var(--navy);
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* ---- KALENDER GRID ---- */
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+
+    .month-card {
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+
+    .month-header {
+      background: var(--navy);
+      color: #fff;
+      padding: 12px 16px;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+
+    .month-name {
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .month-year {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--gold);
+      font-family: var(--mono);
+    }
+
+    .month-days-header {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      padding: 6px 8px 4px;
+      background: rgba(13,27,42,.04);
+    }
+
+    .day-header-cell {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      text-align: center;
+      padding: 2px 0;
+    }
+
+    .day-header-cell.sun { color: #e05c5c; }
+    .day-header-cell.sat { color: #3498db; }
+
+    .month-body {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      padding: 4px 8px 8px;
+      gap: 1px;
+    }
+
+    .day-cell {
+      min-height: 38px;
+      padding: 3px 2px;
+      border-radius: 5px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .day-cell.empty { background: transparent; }
+
+    .day-num {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      line-height: 1;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .day-cell.is-sunday .day-num  { color: #e05c5c; }
+    .day-cell.is-saturday .day-num { color: #3498db; }
+    .day-cell.is-today .day-num {
+      background: var(--navy);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .day-cell.has-event {
+      background: rgba(232,197,71,.12);
+    }
+
+    .day-cell.is-holiday {
+      background: rgba(224,92,92,.08);
+    }
+    .day-cell.is-holiday .day-num { color: #e05c5c; }
+
+    .day-event-dots {
+      display: flex;
+      gap: 2px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 2px;
+    }
+
+    .event-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .day-event-label {
+      font-size: 8px;
+      font-family: var(--mono);
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.1;
+      margin-top: 1px;
+      max-width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    /* ---- AGENDA BULAN ---- */
+    .agenda-section {
+      border-top: 1px solid var(--border);
+      padding: 8px 12px;
+    }
+
+    .agenda-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .agenda-item {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 6px;
+      padding: 3px 0;
+      font-size: 11px;
+      border-bottom: 1px solid rgba(0,0,0,.04);
+    }
+
+    .agenda-item:last-child { border-bottom: none; }
+
+    .agenda-date {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 10px;
+      white-space: nowrap;
+    }
+
+    .agenda-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      margin-right: 5px;
+      flex-shrink: 0;
+      vertical-align: middle;
+    }
+
+    .agenda-name {
+      color: var(--text);
+      font-weight: 500;
+      line-height: 1.3;
+    }
+
+    /* ---- TIMELINE ---- */
+    .timeline-section {
+      margin-top: 8px;
+      padding-top: 24px;
+      border-top: 2px solid var(--border);
+    }
+
+    .timeline-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 20px;
+    }
+
+    .timeline-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border-left: 2px solid var(--border);
+      margin-left: 80px;
+    }
+
+    .tl-item {
+      display: grid;
+      grid-template-columns: 130px 1fr;
+      gap: 16px;
+      padding: 12px 0 12px 20px;
+      position: relative;
+      border-bottom: 1px solid rgba(0,0,0,.04);
+    }
+
+    .tl-item::before {
+      content: '';
+      position: absolute;
+      left: -7px;
+      top: 16px;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--border);
+      border: 2px solid #fff;
+    }
+
+    .tl-item.has-dot::before {
+      background: var(--navy);
+    }
+
+    .tl-date {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      text-align: right;
+      padding-right: 4px;
+      line-height: 1.4;
+      margin-left: -150px;
+    }
+
+    .tl-content { }
+
+    .tl-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--navy);
+      line-height: 1.3;
+    }
+
+    .tl-kategori {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* ============================================================
+       PRINT MEDIA
+    ============================================================ */
+    @media print {
+      .print-controls { display: none !important; }
+      body { background: white; }
+      .print-doc { margin-top: 0; max-width: 100%; }
+      .semester-tabs { display: none; }
+      .semester-content { display: block !important; page-break-after: always; }
+      .semester-content:last-child { page-break-after: avoid; }
+      .btn-edit-ringkasan { display: none !important; }
+      .ringkasan-editor { display: none !important; }
+      .month-card { break-inside: avoid; }
+      .tl-item { break-inside: avoid; }
+      @page {
+        size: A4 landscape;
+        margin: 12mm 14mm;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== PRINT CONTROLS ===== -->
+  <div class="print-controls">
+    <h2>📄 Preview Kalender Akademik</h2>
+
+    <div class="ctrl-group">
+      <span class="ctrl-label">Tahun Ajaran</span>
+      <select id="ctrl-tahun" class="ctrl-select"></select>
+    </div>
+
+    <div class="ctrl-group">
+      <span class="ctrl-label">Semester</span>
+      <select id="ctrl-semester" class="ctrl-select">
+        <option value="both">Ganjil & Genap</option>
+        <option value="Ganjil">Ganjil saja</option>
+        <option value="Genap">Genap saja</option>
+      </select>
+    </div>
+
+    <span class="loading-bar" id="loading-bar">⏳ Memuat data...</span>
+
+    <button class="btn-outline" id="btn-reload">↺ Muat Ulang</button>
+    <button class="btn-print" onclick="window.print()">🖨️ Print / Save PDF</button>
+  </div>
+
+  <!-- ===== PRINT DOCUMENT ===== -->
+  <div class="print-doc" id="print-doc">
+    <div style="padding:60px;text-align:center;color:#999;font-family:sans-serif">
+      Memuat data kalender...
+    </div>
+  </div>
+
+  <script>
+  // ============================================================
+  //  STATE
+  // ============================================================
+  const PS = {
+    tahunAjaran: [],
+    events:      [],
+    holidays:    [],
+    kategori:    [],
+    overrides:   [],
+    ringkasan:   { Ganjil: [], Genap: [] }, // bisa diedit manual
+    filter:      { tahun: "", semester: "both" },
+  };
+
+  const BULAN_ID = ["Januari","Februari","Maret","April","Mei","Juni",
+                    "Juli","Agustus","September","Oktober","November","Desember"];
+  const HARI_ID  = ["MIN","SEN","SEL","RAB","KAM","JUM","SAB"];
+
+  // ============================================================
+  //  API
+  // ============================================================
+  async function apiGet(params) {
+    const url = new URL(CONFIG.GAS_URL);
+    Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
+    const res = await fetch(url.toString());
+    return res.json();
+  }
+
+  // ============================================================
+  //  INIT
+  // ============================================================
+  document.addEventListener("DOMContentLoaded", async () => {
+    document.getElementById("loading-bar").style.display = "inline";
+    try {
+      const [taRes, katRes, ovRes] = await Promise.all([
+        apiGet({ action: "getTahunAjaran" }),
+        apiGet({ action: "getKategori" }),
+        apiGet({ action: "getOverrides" }),
+      ]);
+      PS.tahunAjaran = taRes.data  || [];
+      PS.kategori    = katRes.data || [];
+      PS.overrides   = ovRes.data  || [];
+
+      populateTahunSelect();
+
+      // Baca param dari URL jika ada
+      const urlParams = new URLSearchParams(window.location.search);
+      const tahunParam = urlParams.get("tahun");
+      if (tahunParam && PS.tahunAjaran.includes(tahunParam)) {
+        PS.filter.tahun = tahunParam;
+        document.getElementById("ctrl-tahun").value = tahunParam;
+      }
+
+      await loadAndRender();
+    } catch(e) {
+      document.getElementById("print-doc").innerHTML =
+        `<div style="padding:40px;color:red">Gagal memuat data: ${e.message}</div>`;
+    }
+    document.getElementById("loading-bar").style.display = "none";
+
+    document.getElementById("ctrl-tahun").addEventListener("change", async () => {
+      PS.filter.tahun = document.getElementById("ctrl-tahun").value;
+      await loadAndRender();
+    });
+    document.getElementById("ctrl-semester").addEventListener("change", () => {
+      PS.filter.semester = document.getElementById("ctrl-semester").value;
+      renderDoc();
+    });
+    document.getElementById("btn-reload").addEventListener("click", async () => {
+      document.getElementById("loading-bar").style.display = "inline";
+      await loadAndRender();
+      document.getElementById("loading-bar").style.display = "none";
+    });
+  });
+
+  function populateTahunSelect() {
+    const sel = document.getElementById("ctrl-tahun");
+    sel.innerHTML = "";
+    PS.tahunAjaran.forEach(ta => {
+      const opt = document.createElement("option");
+      opt.value = ta; opt.textContent = ta;
+      sel.appendChild(opt);
+    });
+    // Default: tahun pertama
+    PS.filter.tahun = PS.tahunAjaran[0] || "";
+    sel.value = PS.filter.tahun;
+  }
+
+  async function loadAndRender() {
+    document.getElementById("loading-bar").style.display = "inline";
+    const tahun = PS.filter.tahun;
+    const yearStart = parseInt(tahun.split("/")[0]) || new Date().getFullYear();
+    const yearEnd   = parseInt(tahun.split("/")[1]) || yearStart + 1;
+
+    const [evRes, hol1, hol2] = await Promise.all([
+      apiGet({ action: "getEvents", tahun_ajaran: tahun }),
+      apiGet({ action: "getHolidays", year: yearStart }),
+      apiGet({ action: "getHolidays", year: yearEnd }),
+    ]);
+
+    PS.events   = evRes.data  || [];
+    PS.holidays = [...(hol1.data||[]), ...(hol2.data||[])];
+
+    // Generate ringkasan otomatis
+    PS.ringkasan.Ganjil = generateRingkasan("Ganjil");
+    PS.ringkasan.Genap  = generateRingkasan("Genap");
+
+    renderDoc();
+    document.getElementById("loading-bar").style.display = "none";
+  }
+
+  // ============================================================
+  //  GENERATE RINGKASAN OTOMATIS
+  // ============================================================
+  function generateRingkasan(semester) {
+    const chips = [];
+    const events = PS.events.filter(e => e.semester === semester);
+
+    events.forEach(ev => {
+      const start = new Date(ev.start + "T00:00:00");
+      const end   = new Date(ev.end   + "T00:00:00");
+      end.setDate(end.getDate() - 1); // undo +1 FullCalendar
+
+      // Format tanggal ringkas
+      const startStr = formatShort(start);
+      const endStr   = formatShort(end);
+      const isSameDay = ev.start === ev.end ||
+        (end - start) < 86400000;
+
+      const dateStr = isSameDay ? startStr : `${startStr}–${endStr}`;
+
+      // Tentukan label chip dari nama kategori
+      const nama = ev.title || "";
+      const kat  = (ev.kategori_nama || "").toUpperCase();
+      let label  = "•";
+      if (kat.includes("UTS") || nama.toUpperCase().includes("UTS"))  label = "UTS";
+      else if (kat.includes("UAS") || nama.toUpperCase().includes("UAS"))  label = "UAS";
+      else if (kat.includes("PERKULIAHAN") || nama.toUpperCase().includes("PERKULIAHAN")) label = "KUL";
+      else if (kat.includes("WISUDA"))  label = "WIS";
+      else if (kat.includes("ORIENTASI") || nama.toUpperCase().includes("MABA"))  label = "MHB";
+      else if (kat.includes("PENDAFTARAN") || kat.includes("PMB"))  label = "PMB";
+
+      chips.push({ label, text: `${dateStr}: ${nama}`, color: ev.color || "#666" });
+    });
+
+    return chips;
+  }
+
+  function formatShort(date) {
+    const d = date.getDate();
+    const m = BULAN_ID[date.getMonth()].slice(0,3);
+    return `${d} ${m}`;
+  }
+
+  // ============================================================
+  //  DETECT SEMESTER MONTHS
+  // ============================================================
+  function getSemesterMonths(semester, tahun) {
+    const yearStart = parseInt(tahun.split("/")[0]);
+    const yearEnd   = parseInt(tahun.split("/")[1]);
+
+    // Deteksi otomatis dari data event
+    const events = PS.events.filter(e => e.semester === semester);
+    if (events.length === 0) {
+      // Fallback default
+      if (semester === "Ganjil") {
+        return [
+          { year: yearStart, month: 8  },  // Sep
+          { year: yearStart, month: 9  },  // Okt
+          { year: yearStart, month: 10 },  // Nov
+          { year: yearStart, month: 11 },  // Des
+          { year: yearEnd,   month: 0  },  // Jan
+          { year: yearEnd,   month: 1  },  // Feb
+        ];
+      } else {
+        return [
+          { year: yearEnd, month: 2 },
+          { year: yearEnd, month: 3 },
+          { year: yearEnd, month: 4 },
+          { year: yearEnd, month: 5 },
+          { year: yearEnd, month: 6 },
+          { year: yearEnd, month: 7 },
+        ];
+      }
+    }
+
+    // Kumpulkan semua bulan yang ada event
+    const monthSet = new Set();
+    events.forEach(ev => {
+      const s = new Date(ev.start + "T00:00:00");
+      const e = new Date(ev.end   + "T00:00:00");
+      let cur = new Date(s.getFullYear(), s.getMonth(), 1);
+      while (cur <= e) {
+        monthSet.add(`${cur.getFullYear()}-${cur.getMonth()}`);
+        cur.setMonth(cur.getMonth() + 1);
+      }
+    });
+
+    return Array.from(monthSet)
+      .map(k => ({ year: parseInt(k.split("-")[0]), month: parseInt(k.split("-")[1]) }))
+      .sort((a, b) => a.year !== b.year ? a.year - b.year : a.month - b.month);
+  }
+
+  // ============================================================
+  //  RENDER DOCUMENT
+  // ============================================================
+  function renderDoc() {
+    const tahun = PS.filter.tahun;
+    const sem   = PS.filter.semester;
+    const yearParts = tahun.split("/");
+
+    const hideDates = new Set(
+      PS.overrides.filter(o => o.action === "hide").map(o => o.tanggal)
+    );
+    const addOverrides = PS.overrides.filter(o => o.action === "add");
+
+    // Build holiday set
+    const holidayMap = {};
+    PS.holidays.forEach(h => {
+      if (!hideDates.has(h.holiday_date)) {
+        holidayMap[h.holiday_date] = h.holiday_name;
+      }
+    });
+    addOverrides.forEach(o => { holidayMap[o.tanggal] = o.nama_pengganti; });
+
+    // Kategori map
+    const katMap = {};
+    PS.kategori.forEach(k => { katMap[k.id] = k; });
+
+    const doc = document.getElementById("print-doc");
+
+    let html = `
+      <!-- HEADER -->
+      <div class="doc-header">
+        <div class="header-logo-area">
+          <div class="logo-circle">
+            <span class="logo-text-inner">SBP</span>
+          </div>
+          <div class="header-text-area">
+            <span class="header-institution">STMIK Bina Patria &nbsp;·&nbsp; Magelang</span>
+            <div class="header-title">Kalender <span>Akademik</span></div>
+            <div class="header-subtitle">Panduan Kegiatan Kemahasiswaan Tahun Akademik ${yearParts[0]} / ${yearParts[1]}</div>
+          </div>
+        </div>
+        <div class="header-year">${yearParts[0]}<br>${yearParts[1]}</div>
+      </div>
+
+      <!-- TABS -->
+      <div class="semester-tabs">
+        ${sem !== "Genap" ? `<button class="tab-btn ${sem !== "Genap" ? "active" : ""}" onclick="switchTab('Ganjil')">Semester Ganjil</button>` : ""}
+        ${sem !== "Ganjil" ? `<button class="tab-btn ${sem === "Genap" ? "active" : ""}" onclick="switchTab('Genap')">Semester Genap</button>` : ""}
+      </div>
+    `;
+
+    // Render tiap semester
+    ["Ganjil","Genap"].forEach(s => {
+      if (sem !== "both" && sem !== s) return;
+      html += renderSemester(s, tahun, holidayMap, katMap, sem);
+    });
+
+    doc.innerHTML = html;
+
+    // Setup tab switch jika keduanya ditampilkan
+    if (sem === "both") {
+      const tabs = doc.querySelectorAll(".tab-btn");
+      const contents = doc.querySelectorAll(".semester-content");
+      contents[0]?.classList.add("active");
+      tabs[0]?.classList.add("active");
+    }
+
+    // Setup ringkasan editor
+    setupRingkasanEditors();
+  }
+
+  function switchTab(sem) {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".semester-content").forEach(c => c.classList.remove("active"));
+    document.querySelector(`.tab-btn[data-sem="${sem}"]`)?.classList.add("active");
+    document.getElementById(`sem-content-${sem}`)?.classList.add("active");
+  }
+
+  // ============================================================
+  //  RENDER SEMESTER
+  // ============================================================
+  function renderSemester(semester, tahun, holidayMap, katMap, filterSem) {
+    const months    = getSemesterMonths(semester, tahun);
+    const events    = PS.events.filter(e => e.semester === semester);
+    const isFirst   = filterSem === "both" && semester === "Ganjil";
+    const isActive  = filterSem !== "both" || semester === "Ganjil";
+
+    // Range label
+    const firstM = months[0];
+    const lastM  = months[months.length - 1];
+    const rangeStr = firstM
+      ? `${BULAN_ID[firstM.month]} ${firstM.year} — ${BULAN_ID[lastM.month]} ${lastM.year}`
+      : "";
+
+    // Legend
+    const legendItems = PS.kategori.map(k =>
+      `<div class="legend-item">
+        <span class="legend-swatch" style="background:${k.warna}"></span>
+        ${k.nama}
+      </div>`
+    ).join("") +
+    `<div class="legend-item">
+      <span class="legend-swatch" style="background:rgba(224,92,92,.25);border:1px solid #e05c5c"></span>
+      Hari Libur Nasional
+    </div>`;
+
+    // Ringkasan chips
+    const chips = PS.ringkasan[semester];
+    const chipsHtml = chips.map((c,i) =>
+      `<span class="chip" onclick="removeChip('${semester}',${i})">
+        <span class="chip-label" style="background:${c.color};color:#fff">${c.label}</span>
+        ${c.text}
+        <span style="opacity:.4;font-size:10px">×</span>
+      </span>`
+    ).join("");
+
+    // Calendar months
+    let calHtml = '<div class="cal-grid">';
+    months.forEach(({ year, month }) => {
+      calHtml += renderMonth(year, month, events, holidayMap, katMap);
+    });
+    calHtml += "</div>";
+
+    // Timeline
+    const timelineHtml = renderTimeline(events, katMap);
+
+    return `
+      <div class="semester-content ${isActive ? "active" : ""}" id="sem-content-${semester}">
+        <div class="sem-title-row">
+          <div style="display:flex;align-items:center">
+            <span class="sem-badge">${semester}</span>
+            <h2 class="sem-title">Semester ${semester}</h2>
+          </div>
+          <span class="sem-range">${rangeStr}</span>
+        </div>
+
+        <div class="legend-box">
+          <div class="legend-title">Keterangan Tampilan</div>
+          <div class="legend-items">${legendItems}</div>
+        </div>
+
+        <div class="ringkasan-box">
+          <div class="ringkasan-title">
+            Ringkasan Kegiatan — Reguler &amp; Paralel
+            <button class="btn-edit-ringkasan" data-sem="${semester}" onclick="toggleRingkasanEditor('${semester}')">✏️ Edit</button>
+          </div>
+          <div class="ringkasan-chips" id="chips-${semester}">${chipsHtml || '<span style="color:rgba(255,255,255,.3);font-size:12px">Belum ada event di semester ini.</span>'}</div>
+          <div class="ringkasan-editor" id="editor-${semester}">
+            <textarea class="ringkasan-textarea" id="textarea-${semester}"
+              placeholder="Satu chip per baris. Format: LABEL|Teks ringkasan|#warna&#10;Contoh: UTS|3-8 Nov: Ujian Tengah Semester|#e74c3c"></textarea>
+            <div class="ringkasan-editor-hint">Format: LABEL|Teks ringkasan|#hexwarna — satu baris per chip</div>
+            <button class="btn-apply-ringkasan" onclick="applyRingkasanEdit('${semester}')">✓ Terapkan</button>
+          </div>
+        </div>
+
+        ${calHtml}
+        ${timelineHtml}
+      </div>
+    `;
+  }
+
+  // ============================================================
+  //  RENDER BULAN
+  // ============================================================
+  function renderMonth(year, month, events, holidayMap, katMap) {
+    const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+
+    // Map event per tanggal
+    const eventByDate = {};
+    events.forEach(ev => {
+      const start = new Date(ev.start + "T00:00:00");
+      const end   = new Date(ev.end   + "T00:00:00");
+      end.setDate(end.getDate() - 1);
+      let cur = new Date(start);
+      while (cur <= end) {
+        if (cur.getFullYear() === year && cur.getMonth() === month) {
+          const key = cur.getDate();
+          if (!eventByDate[key]) eventByDate[key] = [];
+          eventByDate[key].push(ev);
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+    });
+
+    // Agenda bulan ini
+    const agendaItems = [];
+    events.forEach(ev => {
+      const start = new Date(ev.start + "T00:00:00");
+      const end   = new Date(ev.end   + "T00:00:00");
+      end.setDate(end.getDate() - 1);
+      if (start.getFullYear() === year && start.getMonth() === month) {
+        const dateStr = start.getDate() === end.getDate() && start.getMonth() === end.getMonth()
+          ? `${start.getDate()} ${BULAN_ID[month].slice(0,3)}`
+          : `${start.getDate()}–${end.getDate()} ${BULAN_ID[month].slice(0,3)}`;
+        agendaItems.push({ dateStr, ev });
+      }
+    });
+
+    // Libur di bulan ini
+    Object.entries(holidayMap).forEach(([dateStr, name]) => {
+      const d = new Date(dateStr + "T00:00:00");
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        agendaItems.push({
+          dateStr: `${d.getDate()} ${BULAN_ID[month].slice(0,3)}`,
+          ev: { title: name, color: "#e05c5c", kategori_nama: "Libur Nasional", start: dateStr }
+        });
+      }
+    });
+
+    agendaItems.sort((a,b) => new Date(a.ev.start) - new Date(b.ev.start));
+
+    // Build cells
+    let cells = "";
+    for (let i = 0; i < firstDay; i++) {
+      cells += `<div class="day-cell empty"></div>`;
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date    = new Date(year, month, d);
+      const dow     = date.getDay();
+      const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      const isToday = date.toDateString() === today.toDateString();
+      const isHol   = !!holidayMap[dateStr];
+      const dayEvs  = eventByDate[d] || [];
+      const hasEv   = dayEvs.length > 0;
+
+      let cls = "day-cell";
+      if (dow === 0)    cls += " is-sunday";
+      if (dow === 6)    cls += " is-saturday";
+      if (isToday)      cls += " is-today";
+      if (isHol && !hasEv) cls += " is-holiday";
+      if (hasEv)        cls += " has-event";
+
+      const dots = dayEvs.slice(0,3).map(ev =>
+        `<span class="event-dot" style="background:${ev.color}" title="${ev.title}"></span>`
+      ).join("");
+
+      cells += `
+        <div class="${cls}">
+          <span class="day-num">${d}</span>
+          ${dots ? `<div class="day-event-dots">${dots}</div>` : ""}
+        </div>
+      `;
+    }
+
+    const dayHeaders = HARI_ID.map((h,i) =>
+      `<div class="day-header-cell ${i===0?"sun":i===6?"sat":""}">${h}</div>`
+    ).join("");
+
+    const agendaHtml = agendaItems.slice(0,6).map(({dateStr,ev}) =>
+      `<div class="agenda-item">
+        <span class="agenda-date">${dateStr}</span>
+        <span class="agenda-name">
+          <span class="agenda-dot" style="background:${ev.color}"></span>
+          ${ev.title}
+        </span>
+      </div>`
+    ).join("") + (agendaItems.length > 6
+      ? `<div style="font-size:10px;color:var(--muted);padding:3px 0">+${agendaItems.length-6} lainnya...</div>` : "");
+
+    return `
+      <div class="month-card">
+        <div class="month-header">
+          <span class="month-name">${BULAN_ID[month]}</span>
+          <span class="month-year">${year}</span>
+        </div>
+        <div class="month-days-header">${dayHeaders}</div>
+        <div class="month-body">${cells}</div>
+        ${agendaHtml ? `<div class="agenda-section"><div class="agenda-label">Agenda Bulan Ini</div>${agendaHtml}</div>` : ""}
+      </div>
+    `;
+  }
+
+  // ============================================================
+  //  RENDER TIMELINE
+  // ============================================================
+  function renderTimeline(events, katMap) {
+    const sorted = [...events].sort((a,b) => a.start.localeCompare(b.start));
+    if (!sorted.length) return "";
+
+    const items = sorted.map(ev => {
+      const start  = new Date(ev.start + "T00:00:00");
+      const end    = new Date(ev.end   + "T00:00:00");
+      end.setDate(end.getDate() - 1);
+      const isSame = start.toDateString() === end.toDateString();
+      const dateStr = isSame
+        ? `${start.getDate()} ${BULAN_ID[start.getMonth()].slice(0,3)} ${start.getFullYear()}`
+        : `${start.getDate()}–${end.getDate()} ${BULAN_ID[start.getMonth()].slice(0,3)} ${start.getFullYear()}`;
+
+      return `
+        <div class="tl-item has-dot">
+          <div class="tl-date">${dateStr}</div>
+          <div class="tl-content">
+            <div class="tl-name">${ev.title}</div>
+            <div class="tl-kategori">${ev.kategori_nama || ""}</div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <div class="timeline-section">
+        <div class="timeline-title">Tanggal Penting — Semester ini</div>
+        <div class="timeline-list">${items}</div>
+      </div>
+    `;
+  }
+
+  // ============================================================
+  //  RINGKASAN EDITOR
+  // ============================================================
+  function setupRingkasanEditors() {
+    ["Ganjil","Genap"].forEach(sem => {
+      const ta = document.getElementById(`textarea-${sem}`);
+      if (!ta) return;
+      ta.value = PS.ringkasan[sem].map(c => `${c.label}|${c.text}|${c.color}`).join("\n");
+    });
+  }
+
+  function toggleRingkasanEditor(sem) {
+    const ed = document.getElementById(`editor-${sem}`);
+    if (!ed) return;
+    ed.classList.toggle("open");
+  }
+
+  function applyRingkasanEdit(sem) {
+    const ta  = document.getElementById(`textarea-${sem}`);
+    if (!ta)  return;
+    const lines = ta.value.split("\n").filter(l => l.trim());
+    PS.ringkasan[sem] = lines.map(line => {
+      const parts = line.split("|");
+      return {
+        label: parts[0]?.trim() || "•",
+        text:  parts[1]?.trim() || line,
+        color: parts[2]?.trim() || "#666"
+      };
+    });
+
+    // Re-render chips saja
+    const chipsEl = document.getElementById(`chips-${sem}`);
+    if (chipsEl) {
+      chipsEl.innerHTML = PS.ringkasan[sem].map((c,i) =>
+        `<span class="chip" onclick="removeChip('${sem}',${i})">
+          <span class="chip-label" style="background:${c.color};color:#fff">${c.label}</span>
+          ${c.text}
+          <span style="opacity:.4;font-size:10px">×</span>
+        </span>`
+      ).join("");
+    }
+
+    document.getElementById(`editor-${sem}`)?.classList.remove("open");
+  }
+
+  function removeChip(sem, idx) {
+    PS.ringkasan[sem].splice(idx, 1);
+    applyRingkasanEdit(sem); // re-render
+    // Sync textarea
+    const ta = document.getElementById(`textarea-${sem}`);
+    if (ta) ta.value = PS.ringkasan[sem].map(c => `${c.label}|${c.text}|${c.color}`).join("\n");
+  }
+  </script>
+</body>
+</html>
