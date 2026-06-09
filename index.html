@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kalender Akademik — STMIK Bina Patria</title>
+
+  <!-- FullCalendar -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Iconify -->
+  <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="site-header">
+    <div class="header-left">
+      <div class="logo-mark">KA</div>
+      <div class="header-titles">
+        <span class="header-institution">STMIK Bina Patria Magelang</span>
+        <span class="header-app">Kalender Akademik</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <!-- State: Publik -->
+      <div id="state-public" class="header-actions">
+        <button class="btn btn-ghost" id="btn-login-open">
+          <span class="iconify" data-icon="mdi:lock-outline"></span>
+          Admin
+        </button>
+      </div>
+      <!-- State: Login -->
+      <div id="state-logged-in" class="header-actions" style="display:none">
+        <span class="admin-badge">
+          <span class="iconify" data-icon="mdi:shield-check"></span>
+          <span id="admin-name">Admin</span>
+        </span>
+        <button class="btn btn-ghost btn-sm" id="btn-logout">Keluar</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== TOOLBAR ===== -->
+  <div class="toolbar">
+    <div class="toolbar-filters">
+      <div class="filter-group">
+        <label class="filter-label">Tahun Ajaran</label>
+        <select id="filter-tahun" class="filter-select">
+          <option value="">Semua</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Semester</label>
+        <select id="filter-semester" class="filter-select">
+          <option value="">Semua</option>
+          <option value="Ganjil">Ganjil</option>
+          <option value="Genap">Genap</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="toolbar-legend" id="legend-wrap"></div>
+
+    <!-- Admin only actions -->
+    <div class="toolbar-admin" id="toolbar-admin" style="display:none">
+      <button class="btn btn-primary" id="btn-add-event">
+        <span class="iconify" data-icon="mdi:plus"></span>
+        Tambah Kegiatan
+      </button>
+      <button class="btn btn-secondary" id="btn-manage-kategori">
+        <span class="iconify" data-icon="mdi:tag-multiple-outline"></span>
+        Kategori
+      </button>
+      <button class="btn btn-warning" id="btn-manage-override">
+        <span class="iconify" data-icon="mdi:calendar-edit"></span>
+        Override Libur
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== KALENDER ===== -->
+  <main class="calendar-wrap">
+    <div id="loading-overlay" class="loading-overlay">
+      <div class="spinner"></div>
+      <span>Memuat kalender...</span>
+    </div>
+    <div id="calendar"></div>
+  </main>
+
+  <!-- ===================================================
+       MODAL: LOGIN
+  ==================================================== -->
+  <div id="modal-login" class="modal-backdrop" style="display:none">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3>Login Admin BAAK</h3>
+        <button class="modal-close" data-close="modal-login">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="login-error" class="alert alert-error" style="display:none"></div>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="login-username" class="form-input" placeholder="admin_baak" autocomplete="username" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="login-password" class="form-input" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary w-full" id="btn-do-login">
+          <span class="iconify" data-icon="mdi:login"></span>
+          Masuk
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================
+       MODAL: TAMBAH / EDIT EVENT
+  ==================================================== -->
+  <div id="modal-event" class="modal-backdrop" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-event-title">Tambah Kegiatan</h3>
+        <button class="modal-close" data-close="modal-event">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="event-id" />
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tahun Ajaran <span class="req">*</span></label>
+            <select id="event-tahun" class="form-input">
+              <option value="">— pilih —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Semester <span class="req">*</span></label>
+            <select id="event-semester" class="form-input">
+              <option value="">— pilih —</option>
+              <option value="Ganjil">Ganjil</option>
+              <option value="Genap">Genap</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Nama Kegiatan <span class="req">*</span></label>
+          <input type="text" id="event-nama" class="form-input" placeholder="cth: UTS Semester Ganjil" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tanggal Mulai <span class="req">*</span></label>
+            <input type="date" id="event-mulai" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Tanggal Selesai <span class="req">*</span></label>
+            <input type="date" id="event-selesai" class="form-input" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Kategori <span class="req">*</span></label>
+          <select id="event-kategori" class="form-input">
+            <option value="">— pilih kategori —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Deskripsi</label>
+          <textarea id="event-deskripsi" class="form-input" rows="3" placeholder="Opsional — keterangan tambahan"></textarea>
+        </div>
+        <div id="event-error" class="alert alert-error" style="display:none"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="modal-event">Batal</button>
+        <button class="btn btn-danger" id="btn-delete-event" style="display:none">
+          <span class="iconify" data-icon="mdi:trash-can-outline"></span>
+          Hapus
+        </button>
+        <button class="btn btn-primary" id="btn-save-event">
+          <span class="iconify" data-icon="mdi:content-save-outline"></span>
+          Simpan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================
+       MODAL: DETAIL EVENT (publik)
+  ==================================================== -->
+  <div id="modal-detail" class="modal-backdrop" style="display:none">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 id="detail-title">Detail Kegiatan</h3>
+        <button class="modal-close" data-close="modal-detail">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-grid">
+          <div class="detail-row">
+            <span class="detail-label">Tanggal</span>
+            <span id="detail-tanggal" class="detail-value"></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Kategori</span>
+            <span id="detail-kategori" class="detail-value"></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Semester</span>
+            <span id="detail-semester" class="detail-value"></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Tahun Ajaran</span>
+            <span id="detail-tahun" class="detail-value"></span>
+          </div>
+          <div class="detail-row" id="detail-desc-row">
+            <span class="detail-label">Keterangan</span>
+            <span id="detail-deskripsi" class="detail-value"></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer modal-footer-right" id="detail-admin-actions" style="display:none">
+        <button class="btn btn-secondary btn-sm" id="btn-edit-from-detail">
+          <span class="iconify" data-icon="mdi:pencil-outline"></span>
+          Edit
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================
+       MODAL: MANAJEMEN KATEGORI
+  ==================================================== -->
+  <div id="modal-kategori" class="modal-backdrop" style="display:none">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3>Manajemen Kategori</h3>
+        <button class="modal-close" data-close="modal-kategori">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Form tambah -->
+        <div class="inline-form">
+          <input type="hidden" id="kat-edit-id" />
+          <input type="text" id="kat-nama" class="form-input" placeholder="Nama kategori baru" />
+          <input type="color" id="kat-warna" class="form-color" value="#3498db" title="Pilih warna" />
+          <button class="btn btn-primary btn-sm" id="btn-save-kategori">
+            <span class="iconify" data-icon="mdi:plus"></span>
+            Simpan
+          </button>
+          <button class="btn btn-ghost btn-sm" id="btn-cancel-kat" style="display:none">Batal</button>
+        </div>
+        <div id="kat-error" class="alert alert-error" style="display:none"></div>
+
+        <!-- Tabel kategori -->
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Warna</th>
+                <th>Nama Kategori</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="kat-table-body">
+              <tr><td colspan="4" class="text-center text-muted">Memuat...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================
+       MODAL: OVERRIDE LIBUR (butuh PIN)
+  ==================================================== -->
+  <div id="modal-override" class="modal-backdrop" style="display:none">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3>
+          <span class="iconify" data-icon="mdi:shield-key-outline"></span>
+          Override Libur Nasional
+        </h3>
+        <button class="modal-close" data-close="modal-override">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="pin-notice">
+          <span class="iconify" data-icon="mdi:information-outline"></span>
+          Fitur ini memerlukan PIN khusus WK I. Setiap perubahan akan dicatat.
+        </div>
+
+        <!-- Form override -->
+        <div class="override-form">
+          <input type="hidden" id="ov-edit-id" />
+          <div class="form-row">
+            <div class="form-group">
+              <label>Tanggal <span class="req">*</span></label>
+              <input type="date" id="ov-tanggal" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label>Aksi <span class="req">*</span></label>
+              <select id="ov-action" class="form-input">
+                <option value="hide">Sembunyikan (hide)</option>
+                <option value="add">Tambah Libur Manual (add)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" id="ov-nama-wrap">
+            <label>Nama Libur <span class="req">*</span></label>
+            <input type="text" id="ov-nama" class="form-input" placeholder="cth: Libur Dies Natalis" />
+          </div>
+          <div class="form-group">
+            <label>Keterangan</label>
+            <input type="text" id="ov-keterangan" class="form-input" placeholder="Dasar kebijakan" />
+          </div>
+          <div class="form-group">
+            <label>PIN Konfirmasi <span class="req">*</span></label>
+            <input type="password" id="ov-pin" class="form-input form-input-pin" placeholder="••••" maxlength="10" />
+          </div>
+          <div id="ov-error" class="alert alert-error" style="display:none"></div>
+          <button class="btn btn-warning" id="btn-save-override">
+            <span class="iconify" data-icon="mdi:content-save-outline"></span>
+            Simpan Override
+          </button>
+        </div>
+
+        <hr class="divider" />
+
+        <!-- Tabel override yang ada -->
+        <h4 class="section-subtitle">Override Aktif</h4>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Tanggal</th>
+                <th>Aksi</th>
+                <th>Nama</th>
+                <th>Keterangan</th>
+                <th>Oleh</th>
+                <th>Hapus</th>
+              </tr>
+            </thead>
+            <tbody id="ov-table-body">
+              <tr><td colspan="6" class="text-center text-muted">Memuat...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================
+       MODAL: KONFIRMASI HAPUS
+  ==================================================== -->
+  <div id="modal-confirm" class="modal-backdrop" style="display:none">
+    <div class="modal modal-xs">
+      <div class="modal-header">
+        <h3>Konfirmasi Hapus</h3>
+        <button class="modal-close" data-close="modal-confirm">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message">Yakin ingin menghapus data ini?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="modal-confirm">Batal</button>
+        <button class="btn btn-danger" id="btn-confirm-yes">Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notifikasi -->
+  <div id="toast" class="toast" style="display:none"></div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
