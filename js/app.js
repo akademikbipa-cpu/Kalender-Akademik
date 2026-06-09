@@ -52,6 +52,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupEventModalHandlers();
   setupKategoriHandlers();
   setupOverrideHandlers();
+  setupTahunAjaranHandlers();
 
   updateAuthUI();
   await loadInitialData();
@@ -672,6 +673,107 @@ function deleteOverrideRow(id) {
       showToast(res.message, "error");
     }
   });
+}
+
+// ============================================================
+//  TAHUN AJARAN MANAGEMENT
+// ============================================================
+function setupTahunAjaranHandlers() {
+  document.getElementById("btn-manage-tahun").addEventListener("click", () => {
+    renderTahunAjaranTable();
+    openModal("modal-tahun");
+  });
+  document.getElementById("btn-add-tahun").addEventListener("click", addTahunAjaran);
+  document.getElementById("ta-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") addTahunAjaran();
+  });
+}
+
+function renderTahunAjaranTable() {
+  const tbody = document.getElementById("ta-table-body");
+  tbody.innerHTML = "";
+
+  if (!State.tahunAjaran.length) {
+    tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">Belum ada data.</td></tr>';
+    return;
+  }
+
+  State.tahunAjaran.forEach(ta => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td style="font-family:var(--mono);font-weight:600">${ta}</td>
+      <td>
+        <button class="btn btn-danger btn-sm" onclick="deleteTahunAjaran('${ta}')">
+          <span class="iconify" data-icon="mdi:trash-can-outline"></span>
+          Hapus
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function addTahunAjaran() {
+  const input = document.getElementById("ta-input").value.trim();
+  const errEl = document.getElementById("ta-error");
+
+  if (!input) { showError(errEl, "Tahun ajaran wajib diisi."); return; }
+
+  // Validasi format
+  if (!/^\d{4}\/\d{4}$/.test(input)) {
+    showError(errEl, "Format harus YYYY/YYYY, contoh: 2027/2028");
+    return;
+  }
+
+  // Validasi logika tahun
+  const parts = input.split("/");
+  if (parseInt(parts[1]) !== parseInt(parts[0]) + 1) {
+    showError(errEl, "Tahun kedua harus tahun pertama + 1, contoh: 2027/2028");
+    return;
+  }
+
+  setLoading("btn-add-tahun", true);
+  try {
+    const res = await apiPost({ action: "addTahunAjaran", tahun_ajaran: input });
+    if (res.status === "ok") {
+      document.getElementById("ta-input").value = "";
+      hideError(errEl);
+      // Reload tahun ajaran
+      await reloadTahunAjaran();
+      renderTahunAjaranTable();
+      showToast(res.message, "success");
+    } else {
+      showError(errEl, res.message);
+    }
+  } catch (e) {
+    showError(errEl, "Gagal menyimpan.");
+  }
+  setLoading("btn-add-tahun", false);
+}
+
+async function deleteTahunAjaran(ta) {
+  // Cek apakah ada event di tahun ajaran ini
+  const hasEvents = State.events.some(ev => ev.tahun_ajaran === ta);
+  const msg = hasEvents
+    ? `"${ta}" memiliki event aktif. Dropdown akan dihapus tapi data event tetap ada. Lanjutkan?`
+    : `Hapus tahun ajaran "${ta}" dari dropdown?`;
+
+  openConfirm(msg, async () => {
+    const res = await apiPost({ action: "deleteTahunAjaran", tahun_ajaran: ta });
+    if (res.status === "ok") {
+      await reloadTahunAjaran();
+      renderTahunAjaranTable();
+      showToast(res.message, "success");
+    } else {
+      showToast(res.message, "error");
+    }
+  });
+}
+
+async function reloadTahunAjaran() {
+  const res = await apiGet({ action: "getTahunAjaran" });
+  State.tahunAjaran = res.data || [];
+  populateTahunDropdowns();
 }
 
 // ============================================================

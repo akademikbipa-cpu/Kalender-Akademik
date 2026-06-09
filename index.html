@@ -78,6 +78,10 @@
         <span class="iconify" data-icon="mdi:tag-multiple-outline"></span>
         Kategori
       </button>
+      <button class="btn btn-secondary" id="btn-manage-tahun">
+        <span class="iconify" data-icon="mdi:calendar-range"></span>
+        Tahun Ajaran
+      </button>
       <button class="btn btn-warning" id="btn-manage-override">
         <span class="iconify" data-icon="mdi:calendar-edit"></span>
         Override Libur
@@ -368,6 +372,53 @@
       <div class="modal-footer">
         <button class="btn btn-ghost" data-close="modal-confirm">Batal</button>
         <button class="btn btn-danger" id="btn-confirm-yes">Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================
+       MODAL: MANAJEMEN TAHUN AJARAN
+  ==================================================== -->
+  <div id="modal-tahun" class="modal-backdrop" style="display:none">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3>
+          <span class="iconify" data-icon="mdi:calendar-range"></span>
+          Manajemen Tahun Ajaran
+        </h3>
+        <button class="modal-close" data-close="modal-tahun">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Form tambah -->
+        <div class="inline-form" style="margin-bottom:16px">
+          <input type="text" id="ta-input" class="form-input" placeholder="cth: 2027/2028" maxlength="9" />
+          <button class="btn btn-primary btn-sm" id="btn-add-tahun">
+            <span class="iconify" data-icon="mdi:plus"></span>
+            Tambah
+          </button>
+        </div>
+        <div id="ta-error" class="alert alert-error" style="display:none"></div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">
+          Format: <strong>YYYY/YYYY</strong> — contoh: 2027/2028
+        </p>
+
+        <!-- List tahun ajaran -->
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Tahun Ajaran</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="ta-table-body">
+              <tr><td colspan="2" class="text-center text-muted">Memuat...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:10px">
+          ⚠️ Hapus tahun ajaran hanya menghapus dari dropdown, data event tidak terhapus.
+        </p>
       </div>
     </div>
   </div>
