@@ -813,8 +813,9 @@
   async function loadAndRender() {
     document.getElementById("loading-bar").style.display = "inline";
     const tahun = PS.filter.tahun;
-    const yearStart = parseInt(tahun.split("/")[0]) || new Date().getFullYear();
-    const yearEnd   = parseInt(tahun.split("/")[1]) || yearStart + 1;
+    const parts2    = (tahun || "2025/2026").split("/");
+    const yearStart = parseInt(parts2[0]) || new Date().getFullYear();
+    const yearEnd   = parseInt(parts2[1]) || yearStart + 1;
 
     const [evRes, hol1, hol2] = await Promise.all([
       apiGet({ action: "getEvents", tahun_ajaran: tahun }),
@@ -841,8 +842,10 @@
     const events = PS.events.filter(e => e.semester === semester);
 
     events.forEach(ev => {
+      if (!ev.start) return;
       const start = new Date(ev.start + "T00:00:00");
-      const end   = new Date(ev.end   + "T00:00:00");
+      const endRaw = ev.end || ev.start;
+      const end   = new Date(endRaw + "T00:00:00");
       end.setDate(end.getDate() - 1); // undo +1 FullCalendar
 
       // Format tanggal ringkas
@@ -871,17 +874,21 @@
   }
 
   function formatShort(date) {
-    const d = date.getDate();
-    const m = BULAN_ID[date.getMonth()].slice(0,3);
-    return `${d} ${m}`;
+    try {
+      const d = date.getDate();
+      const m = BULAN_ID[date.getMonth()];
+      if (!m) return "";
+      return `${d} ${m.slice(0,3)}`;
+    } catch(e) { return ""; }
   }
 
   // ============================================================
   //  DETECT SEMESTER MONTHS
   // ============================================================
   function getSemesterMonths(semester, tahun) {
-    const yearStart = parseInt(tahun.split("/")[0]);
-    const yearEnd   = parseInt(tahun.split("/")[1]);
+    const parts    = (tahun || "2025/2026").split("/");
+    const yearStart = parseInt(parts[0]) || 2025;
+    const yearEnd   = parseInt(parts[1]) || yearStart + 1;
 
     // Deteksi otomatis dari data event
     const events = PS.events.filter(e => e.semester === semester);
@@ -929,9 +936,9 @@
   //  RENDER DOCUMENT
   // ============================================================
   function renderDoc() {
-    const tahun = PS.filter.tahun;
+    const tahun = PS.filter.tahun || "2025/2026";
     const sem   = PS.filter.semester;
-    const yearParts = tahun.split("/");
+    const yearParts = tahun.includes("/") ? tahun.split("/") : [tahun, tahun];
 
     const hideDates = new Set(
       PS.overrides.filter(o => o.action === "hide").map(o => o.tanggal)
@@ -1097,11 +1104,14 @@
     // Map event per tanggal
     const eventByDate = {};
     events.forEach(ev => {
+      if (!ev.start) return;
       const start = new Date(ev.start + "T00:00:00");
-      const end   = new Date(ev.end   + "T00:00:00");
+      const endRaw = ev.end || ev.start;
+      const end   = new Date(endRaw + "T00:00:00");
       end.setDate(end.getDate() - 1);
       let cur = new Date(start);
-      while (cur <= end) {
+      let safety = 0;
+      while (cur <= end && safety++ < 400) {
         if (cur.getFullYear() === year && cur.getMonth() === month) {
           const key = cur.getDate();
           if (!eventByDate[key]) eventByDate[key] = [];
@@ -1114,8 +1124,10 @@
     // Agenda bulan ini
     const agendaItems = [];
     events.forEach(ev => {
-      const start = new Date(ev.start + "T00:00:00");
-      const end   = new Date(ev.end   + "T00:00:00");
+      if (!ev.start) return;
+      const start  = new Date(ev.start + "T00:00:00");
+      const endRaw = ev.end || ev.start;
+      const end    = new Date(endRaw + "T00:00:00");
       end.setDate(end.getDate() - 1);
       if (start.getFullYear() === year && start.getMonth() === month) {
         const dateStr = start.getDate() === end.getDate() && start.getMonth() === end.getMonth()
@@ -1208,10 +1220,12 @@
     if (!sorted.length) return "";
 
     const items = sorted.map(ev => {
-      const start  = new Date(ev.start + "T00:00:00");
-      const end    = new Date(ev.end   + "T00:00:00");
+      if (!ev.start) return "";
+      const start   = new Date(ev.start + "T00:00:00");
+      const endRaw  = ev.end || ev.start;
+      const end     = new Date(endRaw + "T00:00:00");
       end.setDate(end.getDate() - 1);
-      const isSame = start.toDateString() === end.toDateString();
+      const isSame  = start.toDateString() === end.toDateString();
       const dateStr = isSame
         ? `${start.getDate()} ${BULAN_ID[start.getMonth()].slice(0,3)} ${start.getFullYear()}`
         : `${start.getDate()}–${end.getDate()} ${BULAN_ID[start.getMonth()].slice(0,3)} ${start.getFullYear()}`;
