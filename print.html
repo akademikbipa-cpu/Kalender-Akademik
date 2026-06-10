@@ -1133,6 +1133,7 @@
       const start  = new Date(ev.start + "T00:00:00");
       const endRaw = ev.end || ev.start;
       const end    = new Date(endRaw + "T00:00:00");
+      if (isNaN(start.getTime())) return;
       end.setDate(end.getDate() - 1);
       if (start.getFullYear() === year && start.getMonth() === month) {
         const dateStr = start.getDate() === end.getDate() && start.getMonth() === end.getMonth()
@@ -1221,19 +1222,22 @@
   //  RENDER TIMELINE
   // ============================================================
   function renderTimeline(events, katMap) {
-    const sorted = [...events].sort((a,b) => a.start.localeCompare(b.start));
+    const sorted = [...events]
+      .filter(ev => !!ev.start)
+      .sort((a,b) => (a.start || "").localeCompare(b.start || ""));
     if (!sorted.length) return "";
 
     const items = sorted.map(ev => {
-      if (!ev.start) return "";
-      const start   = new Date(ev.start + "T00:00:00");
-      const endRaw  = ev.end || ev.start;
-      const end     = new Date(endRaw + "T00:00:00");
+      const start  = new Date(ev.start + "T00:00:00");
+      const endRaw = ev.end || ev.start;
+      const end    = new Date(endRaw + "T00:00:00");
+      if (isNaN(start.getTime())) return "";
       end.setDate(end.getDate() - 1);
-      const isSame  = start.toDateString() === end.toDateString();
+      const isSame = start.toDateString() === end.toDateString();
+      const mName  = BULAN_ID[start.getMonth()] || "";
       const dateStr = isSame
-        ? `${start.getDate()} ${BULAN_ID[start.getMonth()].slice(0,3)} ${start.getFullYear()}`
-        : `${start.getDate()}–${end.getDate()} ${BULAN_ID[start.getMonth()].slice(0,3)} ${start.getFullYear()}`;
+        ? `${start.getDate()} ${mName.slice(0,3)} ${start.getFullYear()}`
+        : `${start.getDate()}–${end.getDate()} ${mName.slice(0,3)} ${start.getFullYear()}`;
 
       return `
         <div class="tl-item has-dot">
