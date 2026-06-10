@@ -918,10 +918,14 @@
     // Kumpulkan semua bulan yang ada event
     const monthSet = new Set();
     events.forEach(ev => {
+      if (!ev.start) return;
       const s = new Date(ev.start + "T00:00:00");
-      const e = new Date(ev.end   + "T00:00:00");
+      const endRaw = ev.end || ev.start;
+      const e = new Date(endRaw + "T00:00:00");
+      if (isNaN(s.getTime()) || isNaN(e.getTime())) return;
       let cur = new Date(s.getFullYear(), s.getMonth(), 1);
-      while (cur <= e) {
+      let safety = 0;
+      while (cur <= e && safety++ < 24) {
         monthSet.add(`${cur.getFullYear()}-${cur.getMonth()}`);
         cur.setMonth(cur.getMonth() + 1);
       }
@@ -929,6 +933,7 @@
 
     return Array.from(monthSet)
       .map(k => ({ year: parseInt(k.split("-")[0]), month: parseInt(k.split("-")[1]) }))
+      .filter(m => !isNaN(m.year) && !isNaN(m.month))
       .sort((a, b) => a.year !== b.year ? a.year - b.year : a.month - b.month);
   }
 
@@ -1022,7 +1027,7 @@
     // Range label
     const firstM = months[0];
     const lastM  = months[months.length - 1];
-    const rangeStr = firstM
+    const rangeStr = (firstM && lastM && BULAN_ID[firstM.month] && BULAN_ID[lastM.month])
       ? `${BULAN_ID[firstM.month]} ${firstM.year} — ${BULAN_ID[lastM.month]} ${lastM.year}`
       : "";
 
