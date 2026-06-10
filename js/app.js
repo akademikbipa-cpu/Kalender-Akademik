@@ -526,27 +526,22 @@ function renderKategoriTable() {
     return;
   }
 
-  // Reload all kategori (termasuk inactive) khusus untuk table
-  apiGet({ action: "getKategori" }).then(res => {
-    // Untuk table, kita load ulang semua (state.kategori hanya aktif)
-    // Karena API hanya return aktif, kita tampilkan dari state saja
-    State.kategori.forEach(k => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td><span class="color-swatch" style="background:${k.warna}"></span></td>
-        <td>${k.nama}</td>
-        <td><span class="badge badge-active">Aktif</span></td>
-        <td>
-          <button class="btn btn-secondary btn-sm" onclick="editKategori('${k.id}','${k.nama}','${k.warna}')">
-            Edit
-          </button>
-          <button class="btn btn-danger btn-sm" onclick="deleteKategori('${k.id}','${k.nama}')">
-            Hapus
-          </button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
+  State.kategori.forEach(k => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><span class="color-swatch" style="background:${k.warna}"></span></td>
+      <td>${k.nama}</td>
+      <td><span class="badge badge-active">Aktif</span></td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="editKategori('${k.id}','${k.nama}','${k.warna}')">
+          Edit
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="deleteKategori('${k.id}','${k.nama}')">
+          Hapus
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
   });
 }
 
