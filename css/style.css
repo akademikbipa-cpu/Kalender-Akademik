@@ -116,28 +116,37 @@ body {
 }
 .filter-select:focus { border-color: var(--navy-600); }
 
-.toolbar-legend {
-  display: flex; align-items: center; gap: 6px;
+.toolbar-legend { display: none; } /* dipindah ke bawah kalender */
+
+/* ---- Legend Bar (bawah kalender) ---- */
+.calendar-legend-bar {
+  display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  flex: 1;
+  gap: 6px 16px;
+  padding: 12px 24px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  margin: 0 0 0 0;
 }
 
 .legend-item {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 11px; color: var(--text-muted);
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-muted);
   cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
   transition: background var(--transition);
+  white-space: nowrap;
 }
-.legend-item:hover { background: var(--bg); }
+.legend-item:hover { background: var(--bg); color: var(--text); }
 .legend-dot {
-  width: 9px; height: 9px;
+  width: 10px; height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.toolbar-admin { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.toolbar-admin { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
 
 /* ---- Buttons ---- */
 .btn {
