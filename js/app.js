@@ -145,19 +145,25 @@ function initCalendar() {
   });
 
   State.calendar.render();
+  gotoSemesterStart(State.filter.tahun, State.filter.semester);
   showLoading(false);
 
-  // Filter change
-  selTahun.addEventListener("change", () => {
-    State.filter.tahun = selTahun.value;
-    localStorage.setItem("ka_filter_tahun", selTahun.value);
-    State.calendar.refetchEvents();
-  });
-  selSem.addEventListener("change", () => {
-    State.filter.semester = selSem.value;
-    localStorage.setItem("ka_filter_semester", selSem.value);
-    State.calendar.refetchEvents();
-  });
+  // Filter diterapkan hanya lewat tombol "Terapkan" (bukan on-change),
+  // agar bulan yang tampil selalu cocok dengan filter dan tidak salah baca.
+  const btnApply = document.getElementById("filter-apply");
+  if (btnApply) {
+    btnApply.addEventListener("click", () => {
+      State.filter.tahun    = selTahun.value;
+      State.filter.semester = selSem.value;
+      localStorage.setItem("ka_filter_tahun", selTahun.value);
+      localStorage.setItem("ka_filter_semester", selSem.value);
+
+      // Lompat ke bulan awal semester supaya tampilan sesuai filter
+      gotoSemesterStart(selTahun.value, selSem.value);
+      State.calendar.refetchEvents();
+      showToast(`Menampilkan ${selTahun.value || "semua TA"} — ${selSem.value || "semua semester"}.`, "success");
+    });
+  }
 }
 
 // ============================================================
@@ -972,4 +978,20 @@ function shiftYMD(ymd, delta) {
   const dt = new Date(Date.UTC(y, m - 1, d));
   dt.setUTCDate(dt.getUTCDate() + delta);
   return dt.toISOString().slice(0, 10);
+}
+
+// Arahkan tampilan kalender ke bulan awal semester terpilih.
+// TA "2026/2027": Ganjil -> September 2026, Genap -> Februari 2027.
+function gotoSemesterStart(tahun, semester) {
+  if (!State.calendar || !tahun) return;
+  const parts = String(tahun).split("/").map(Number);
+  const startYear = parts[0];
+  const endYear   = parts[1] || startYear;
+  let target;
+  if (semester === "Genap") {
+    target = new Date(endYear, 1, 1);   // Februari
+  } else {
+    target = new Date(startYear, 8, 1); // September (default/Ganjil)
+  }
+  if (!isNaN(target.getTime())) State.calendar.gotoDate(target);
 }

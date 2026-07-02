@@ -135,6 +135,23 @@ body {
 .filter-select:hover { border-color: var(--border-strong); }
 .filter-select:focus { border-color: var(--navy-600); background: #fff; }
 
+.btn-apply {
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 16px;
+  border: 1.5px solid var(--navy-800);
+  border-radius: var(--radius-sm);
+  background: var(--navy-800);
+  color: #fff;
+  cursor: pointer;
+  outline: none;
+  line-height: 1.4;
+  transition: background var(--transition), border-color var(--transition), transform var(--transition);
+}
+.btn-apply:hover { background: var(--navy-600); border-color: var(--navy-600); }
+.btn-apply:active { transform: scale(.97); }
+
 .toolbar-legend { display: none; }
 
 /* ---- Legend Bar ---- */
