@@ -303,12 +303,37 @@ async function doLogout() {
 
 function updateAuthUI() {
   const isLoggedIn = !!State.token;
+  const isAdmin    = isLoggedIn && State.user && State.user.role === "admin_baak";
+
   document.getElementById("state-public").style.display    = isLoggedIn ? "none"  : "flex";
   document.getElementById("state-logged-in").style.display = isLoggedIn ? "flex"  : "none";
   document.getElementById("toolbar-admin").style.display   = isLoggedIn ? "flex"  : "none";
 
+  // Tombol pengelolaan master data & verifikasi khusus admin BAAK
+  const adminOnlyBtns = ["btn-manage-kategori", "btn-export-pdf", "btn-manage-tahun", "btn-manage-override"];
+  adminOnlyBtns.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isAdmin ? "" : "none";
+  });
+  const verifBtn = document.getElementById("btn-verifikasi");
+  if (verifBtn) verifBtn.style.display = isAdmin ? "" : "none";
+
+  // Kontributor: tombol tambah berubah jadi "Ajukan Kegiatan"
+  const addBtn = document.getElementById("btn-add-event");
+  if (addBtn) {
+    addBtn.innerHTML = isAdmin
+      ? '<span class="iconify" data-icon="mdi:plus"></span> Tambah Kegiatan'
+      : '<span class="iconify" data-icon="mdi:send-outline"></span> Ajukan Kegiatan';
+  }
+
   if (isLoggedIn && State.user) {
-    document.getElementById("admin-name").textContent = State.user.nama || State.user.username;
+    const badge = document.getElementById("admin-name");
+    if (badge) {
+      badge.textContent = isAdmin
+        ? "Administrator BAAK"
+        : (State.user.nama || State.user.username) + (State.user.unit ? " — " + State.user.unit : "");
+    }
+    if (isAdmin) refreshVerifBadge();
   }
 }
 
@@ -317,6 +342,8 @@ function updateAuthUI() {
 // ============================================================
 function setupEventModalHandlers() {
   document.getElementById("btn-add-event").addEventListener("click", () => openEventModal(null, null));
+  const btnVerif = document.getElementById("btn-verifikasi");
+  if (btnVerif) btnVerif.addEventListener("click", openVerifikasi);
   document.getElementById("btn-save-event").addEventListener("click", saveEvent);
   document.getElementById("btn-delete-event").addEventListener("click", () => {
     openConfirm("Yakin ingin menghapus kegiatan ini?", deleteEvent);
@@ -413,8 +440,9 @@ async function saveEvent() {
     } else if (res.status === "ok") {
       closeModal("modal-event");
       State.calendar.refetchEvents();
-      showToast(isEdit ? "Kegiatan berhasil diupdate." : "Kegiatan berhasil ditambahkan.", "success");
+      showToast(res.message || (isEdit ? "Kegiatan berhasil diupdate." : "Kegiatan berhasil ditambahkan."), "success");
       _hideForceButton();
+      if (State.user && State.user.role === "admin_baak") refreshVerifBadge();
     } else {
       showError(errEl, res.message);
     }
@@ -963,6 +991,166 @@ function showToast(msg, type = "success") {
   toast.style.display = "block";
   clearTimeout(toast._timer);
   toast._timer = setTimeout(() => { toast.style.display = "none"; }, 3200);
+}
+
+// ============================================================
+//  VERIFIKASI USULAN (admin BAAK)
+// ============================================================
+async function refreshVerifBadge() {
+  try {
+    const res = await apiPost({ action: "getUsulan" });
+    if (res.status !== "ok") return;
+    const n = (res.data || []).length;
+    const badge = document.getElementById("verif-badge");
+    if (badge) {
+      badge.textContent = n;
+      badge.style.display = n > 0 ? "inline-flex" : "none";
+    }
+  } catch (e) { /* diam saja */ }
+}
+
+async function openVerifikasi() {
+  openModal("modal-verifikasi");
+  const list  = document.getElementById("verif-list");
+  const empty = document.getElementById("verif-empty");
+  list.innerHTML = '<div class="verif-empty">Memuat usulan…</div>';
+  empty.style.display = "none";
+
+  try {
+    const res = await apiPost({ action: "getUsulan" });
+    if (res.status !== "ok") {
+      list.innerHTML = "";
+      empty.textContent = res.message || "Gagal memuat usulan.";
+      empty.style.display = "block";
+      return;
+    }
+    renderVerifList(res.data || []);
+  } catch (e) {
+    list.innerHTML = "";
+    empty.textContent = "Gagal terhubung ke server.";
+    empty.style.display = "block";
+  }
+}
+
+function renderVerifList(usulan) {
+  const list  = document.getElementById("verif-list");
+  const empty = document.getElementById("verif-empty");
+  list.innerHTML = "";
+
+  if (!usulan.length) {
+    empty.textContent = "Tidak ada usulan yang menunggu verifikasi.";
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+
+  usulan.forEach(u => {
+    const rentang = u.start === u.end
+      ? formatDate(u.start)
+      : `${formatDate(u.start)} – ${formatDate(u.end)}`;
+    const card = document.createElement("div");
+    card.className = "verif-card";
+    card.dataset.id = u.id;
+    card.innerHTML = `
+      <div class="verif-card-top">
+        <span class="verif-dot" style="background:${u.color || "#999"}"></span>
+        <div class="verif-card-main">
+          <div class="verif-card-title">${_esc(u.title)}</div>
+          <div class="verif-card-meta">
+            <strong>${_esc(rentang)}</strong> · ${_esc(u.kategori_nama || "")}<br>
+            ${_esc(u.tahun_ajaran)} — ${_esc(u.semester)} ·
+            diajukan oleh <strong>${_esc(u.pengaju_nama || u.diajukan_oleh)}</strong>${u.unit ? " (" + _esc(u.unit) + ")" : ""}
+          </div>
+          ${u.deskripsi ? `<div class="verif-card-desc">${_esc(u.deskripsi)}</div>` : ""}
+          <div class="verif-card-actions">
+            <button class="btn btn-primary btn-xs" data-act="approve">Setujui</button>
+            <button class="btn btn-secondary btn-xs" data-act="edit">Edit dulu</button>
+            <button class="btn btn-danger btn-xs" data-act="reject-open">Tolak</button>
+          </div>
+          <div class="verif-reject-box">
+            <input type="text" placeholder="Alasan penolakan (opsional)" data-role="reject-note" />
+            <button class="btn btn-danger btn-xs" data-act="reject-confirm">Kirim</button>
+          </div>
+        </div>
+      </div>`;
+
+    card.querySelector('[data-act="approve"]').addEventListener("click", () => approveUsulan(u.id, false));
+    card.querySelector('[data-act="edit"]').addEventListener("click", () => {
+      closeModal("modal-verifikasi");
+      // Buka modal edit dengan data usulan (start/end di sini masih inklusif)
+      openEventModal({
+        id: u.id,
+        title: u.title,
+        startStr: u.start,
+        endStr: shiftYMD(u.end, 1), // openEventModal mengurangi 1 lagi → tampil inklusif
+        extendedProps: {
+          nama_kegiatan: u.title, tahun_ajaran: u.tahun_ajaran, semester: u.semester,
+          deskripsi: u.deskripsi, kategori_id: u.kategori_id
+        }
+      }, null);
+    });
+    const rejectBox = card.querySelector(".verif-reject-box");
+    card.querySelector('[data-act="reject-open"]').addEventListener("click", () => {
+      rejectBox.classList.toggle("show");
+    });
+    card.querySelector('[data-act="reject-confirm"]').addEventListener("click", () => {
+      const note = card.querySelector('[data-role="reject-note"]').value.trim();
+      rejectUsulan(u.id, note);
+    });
+
+    list.appendChild(card);
+  });
+}
+
+async function approveUsulan(id, force) {
+  try {
+    const res = await apiPost({ action: "approveEvent", event_id: id, force: !!force });
+    if (res.status === "conflict") {
+      const list = res.conflicts.map(c => `• ${c.nama} (${c.mulai} s/d ${c.selesai})`).join("\n");
+      if (confirm(`⚠️ ${res.message}\n\n${list}\n\nTetap setujui dan publikasikan?`)) {
+        return approveUsulan(id, true);
+      }
+      return;
+    }
+    if (res.status === "ok") {
+      showToast("Usulan disetujui & dipublikasikan.", "success");
+      _removeVerifCard(id);
+      State.calendar.refetchEvents();
+      refreshVerifBadge();
+    } else {
+      showToast(res.message || "Gagal menyetujui.", "error");
+    }
+  } catch (e) { showToast("Gagal terhubung ke server.", "error"); }
+}
+
+async function rejectUsulan(id, catatan) {
+  try {
+    const res = await apiPost({ action: "rejectEvent", event_id: id, catatan });
+    if (res.status === "ok") {
+      showToast("Usulan ditolak.", "success");
+      _removeVerifCard(id);
+      refreshVerifBadge();
+    } else {
+      showToast(res.message || "Gagal menolak.", "error");
+    }
+  } catch (e) { showToast("Gagal terhubung ke server.", "error"); }
+}
+
+function _removeVerifCard(id) {
+  const card = document.querySelector(`.verif-card[data-id="${id}"]`);
+  if (card) card.remove();
+  const remaining = document.querySelectorAll(".verif-card").length;
+  if (remaining === 0) {
+    const empty = document.getElementById("verif-empty");
+    empty.textContent = "Tidak ada usulan yang menunggu verifikasi.";
+    empty.style.display = "block";
+  }
+}
+
+function _esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 function formatDate(date) {
