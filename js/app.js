@@ -87,17 +87,27 @@ async function loadInitialData() {
 function initCalendar() {
   const el = document.getElementById("calendar");
 
-  // Tentukan default filter (tahun ajaran & semester berjalan)
-  const defaultTahun = CONFIG.DEFAULT_TAHUN_AJARAN;
-  const defaultSem   = CONFIG.DEFAULT_SEMESTER;
-
-  // Set filter dropdown ke default
   const selTahun = document.getElementById("filter-tahun");
   const selSem   = document.getElementById("filter-semester");
 
-  // Cari apakah default ada di list
-  if (State.tahunAjaran.includes(defaultTahun)) selTahun.value = defaultTahun;
-  selSem.value = defaultSem;
+  // Tentukan tahun ajaran awal, prioritas:
+  //  1) pilihan terakhir user (localStorage) — biar refresh tidak reset
+  //  2) default dari config, jika memang ada di daftar
+  //  3) entri pertama daftar TA (samakan dengan halaman export)
+  const savedTahun = localStorage.getItem("ka_filter_tahun");
+  const savedSem   = localStorage.getItem("ka_filter_semester");
+
+  let initTahun = "";
+  if (savedTahun && State.tahunAjaran.includes(savedTahun)) {
+    initTahun = savedTahun;
+  } else if (State.tahunAjaran.includes(CONFIG.DEFAULT_TAHUN_AJARAN)) {
+    initTahun = CONFIG.DEFAULT_TAHUN_AJARAN;
+  } else {
+    initTahun = State.tahunAjaran[0] || "";
+  }
+
+  selTahun.value = initTahun;
+  selSem.value   = savedSem || CONFIG.DEFAULT_SEMESTER;
 
   State.filter.tahun    = selTahun.value;
   State.filter.semester = selSem.value;
@@ -140,10 +150,12 @@ function initCalendar() {
   // Filter change
   selTahun.addEventListener("change", () => {
     State.filter.tahun = selTahun.value;
+    localStorage.setItem("ka_filter_tahun", selTahun.value);
     State.calendar.refetchEvents();
   });
   selSem.addEventListener("change", () => {
     State.filter.semester = selSem.value;
+    localStorage.setItem("ka_filter_semester", selSem.value);
     State.calendar.refetchEvents();
   });
 }
