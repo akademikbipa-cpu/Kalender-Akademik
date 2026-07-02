@@ -318,11 +318,11 @@ function openEventModal(eventData, dateStr) {
   document.getElementById("event-mulai").value    = isEdit ? eventData.startStr : (dateStr || "");
   document.getElementById("event-deskripsi").value = isEdit ? (eventData.extendedProps?.deskripsi || "") : "";
 
-  // End date: FullCalendar end sudah +1, kembalikan ke asli
-  if (isEdit && eventData.end) {
-    const endFixed = new Date(eventData.end);
-    endFixed.setDate(endFixed.getDate() - 1);
-    document.getElementById("event-selesai").value = endFixed.toISOString().slice(0,10);
+  // End date: FullCalendar end bersifat eksklusif (+1), kembalikan ke tanggal asli.
+  // Pakai endStr (string "YYYY-MM-DD") + shiftYMD berbasis UTC agar tidak mundur
+  // sehari akibat konversi timezone (WIB = UTC+7).
+  if (isEdit && eventData.endStr) {
+    document.getElementById("event-selesai").value = shiftYMD(eventData.endStr, -1);
   } else {
     document.getElementById("event-selesai").value = dateStr || "";
   }
@@ -950,4 +950,14 @@ function showToast(msg, type = "success") {
 function formatDate(date) {
   const d = new Date(date);
   return d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+}
+
+// Geser tanggal string "YYYY-MM-DD" sebanyak `delta` hari, aman timezone.
+// Dibangun & dibaca sama-sama di UTC, jadi offset WIB tidak pernah bocor.
+function shiftYMD(ymd, delta) {
+  if (!ymd) return ymd;
+  const [y, m, d] = String(ymd).slice(0, 10).split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + delta);
+  return dt.toISOString().slice(0, 10);
 }
