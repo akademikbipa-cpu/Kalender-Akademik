@@ -209,13 +209,22 @@ async function fetchCalendarEvents(fetchInfo, successCb, failureCb) {
     });
 
     // Libur nasional (dengan override logic)
+    // Normalisasi ke "YYYY-MM-DD" agar cocok walau API/override memberi
+    // format tanpa zero-pad (mis. "2025-1-1").
+    const normDate = (v) => {
+      if (!v) return "";
+      const s = String(v).slice(0, 10);
+      const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (!m) return s;
+      return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
+    };
     const hideDates = new Set(
-      State.overrides.filter(o => o.action === "hide").map(o => o.tanggal)
+      State.overrides.filter(o => o.action === "hide").map(o => normDate(o.tanggal))
     );
     const addOverrides = State.overrides.filter(o => o.action === "add");
 
     State.holidays.forEach(h => {
-      if (hideDates.has(h.holiday_date)) return; // di-hide
+      if (hideDates.has(normDate(h.holiday_date))) return; // di-hide
       allEvents.push({
         id:        "hol_" + h.holiday_date,
         title:     "🔴 " + h.holiday_name,
@@ -717,9 +726,9 @@ async function saveOverride() {
   setLoading("btn-save-override", true);
   try {
     const res = await apiPost({
-      action:         "addOverride",
+      action:         "addOverride",  // router backend
       tanggal,
-      action:          action,
+      ov_action:       action,        // tipe override: "hide" | "add"
       nama_pengganti:  nama,
       keterangan:      ket,
       pin,

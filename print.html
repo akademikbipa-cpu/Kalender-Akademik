@@ -945,15 +945,22 @@
     const sem   = PS.filter.semester;
     const yearParts = tahun.includes("/") ? tahun.split("/") : [tahun, tahun];
 
+    const normDate = (v) => {
+      if (!v) return "";
+      const s = String(v).slice(0, 10);
+      const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (!m) return s;
+      return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
+    };
     const hideDates = new Set(
-      PS.overrides.filter(o => o.action === "hide").map(o => o.tanggal)
+      PS.overrides.filter(o => o.action === "hide").map(o => normDate(o.tanggal))
     );
     const addOverrides = PS.overrides.filter(o => o.action === "add");
 
     // Build holiday set
     const holidayMap = {};
     PS.holidays.forEach(h => {
-      if (!hideDates.has(h.holiday_date)) {
+      if (!hideDates.has(normDate(h.holiday_date))) {
         holidayMap[h.holiday_date] = h.holiday_name;
       }
     });
