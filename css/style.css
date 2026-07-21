@@ -135,23 +135,6 @@ body {
 .filter-select:hover { border-color: var(--border-strong); }
 .filter-select:focus { border-color: var(--navy-600); background: #fff; }
 
-.btn-apply {
-  font-family: var(--font);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 6px 16px;
-  border: 1.5px solid var(--navy-800);
-  border-radius: var(--radius-sm);
-  background: var(--navy-800);
-  color: #fff;
-  cursor: pointer;
-  outline: none;
-  line-height: 1.4;
-  transition: background var(--transition), border-color var(--transition), transform var(--transition);
-}
-.btn-apply:hover { background: var(--navy-600); border-color: var(--navy-600); }
-.btn-apply:active { transform: scale(.97); }
-
 .toolbar-legend { display: none; }
 
 /* ---- Legend Bar ---- */
@@ -632,37 +615,3 @@ textarea.form-input { resize: vertical; line-height: 1.5; }
   .site-header { padding: 0 16px; }
   .header-institution { display: none; }
 }
-/* ===== VERIFIKASI USULAN ===== */
-.verif-badge {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 18px; height: 18px; padding: 0 5px;
-  margin-left: 4px; border-radius: 9px;
-  background: var(--red); color: #fff;
-  font-size: 11px; font-weight: 700; line-height: 1;
-}
-.verif-hint { font-size: 13px; color: var(--text-muted); margin: 0 0 14px; }
-.verif-list { display: flex; flex-direction: column; gap: 10px; }
-.verif-empty { text-align: center; color: var(--text-muted); padding: 28px 0; font-size: 14px; }
-
-.verif-card {
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
-  background: var(--bg);
-}
-.verif-card-top { display: flex; align-items: flex-start; gap: 8px; }
-.verif-dot { width: 11px; height: 11px; border-radius: 50%; margin-top: 4px; flex: none; }
-.verif-card-main { flex: 1; min-width: 0; }
-.verif-card-title { font-weight: 700; font-size: 14.5px; color: var(--text); }
-.verif-card-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; line-height: 1.5; }
-.verif-card-meta strong { color: var(--text); font-weight: 600; }
-.verif-card-desc { font-size: 12.5px; color: var(--text-muted); margin-top: 6px; font-style: italic; }
-.verif-card-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
-.verif-reject-box { margin-top: 8px; display: none; gap: 8px; }
-.verif-reject-box.show { display: flex; }
-.verif-reject-box input {
-  flex: 1; font-family: var(--font); font-size: 13px;
-  padding: 6px 10px; border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm); outline: none;
-}
-.btn-xs { padding: 5px 12px; font-size: 12.5px; }

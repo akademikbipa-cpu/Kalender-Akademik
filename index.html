@@ -33,7 +33,7 @@
       <div id="state-public" class="header-actions">
         <button class="btn btn-ghost" id="btn-login-open">
           <span class="iconify" data-icon="mdi:lock-outline"></span>
-          Login
+          Admin
         </button>
       </div>
       <!-- State: Login -->
@@ -64,10 +64,6 @@
           <option value="Genap">Genap</option>
         </select>
       </div>
-      <div class="filter-group">
-        <label class="filter-label">&nbsp;</label>
-        <button id="filter-apply" class="btn-apply" type="button">Terapkan</button>
-      </div>
     </div>
 
 
@@ -76,10 +72,6 @@
       <button class="btn btn-primary" id="btn-add-event">
         <span class="iconify" data-icon="mdi:plus"></span>
         Tambah Kegiatan
-      </button>
-      <button class="btn btn-secondary" id="btn-verifikasi" style="display:none">
-        <span class="iconify" data-icon="mdi:clipboard-check-outline"></span>
-        Verifikasi <span id="verif-badge" class="verif-badge" style="display:none">0</span>
       </button>
       <button class="btn btn-secondary" id="btn-manage-kategori">
         <span class="iconify" data-icon="mdi:tag-multiple-outline"></span>
@@ -118,7 +110,7 @@
   <div id="modal-login" class="modal-backdrop" style="display:none">
     <div class="modal modal-sm">
       <div class="modal-header">
-        <h3>Login Pengguna</h3>
+        <h3>Login Admin BAAK</h3>
         <button class="modal-close" data-close="modal-login">&times;</button>
       </div>
       <div class="modal-body">
@@ -433,23 +425,6 @@
         <p style="font-size:11px;color:var(--text-muted);margin-top:10px">
           ⚠️ Hapus tahun ajaran hanya menghapus dari dropdown, data event tidak terhapus.
         </p>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===================================================
-       MODAL: VERIFIKASI USULAN
-  ==================================================== -->
-  <div id="modal-verifikasi" class="modal-backdrop" style="display:none">
-    <div class="modal modal-lg">
-      <div class="modal-header">
-        <h3>Verifikasi Usulan Kegiatan</h3>
-        <button class="modal-close" data-close="modal-verifikasi">&times;</button>
-      </div>
-      <div class="modal-body">
-        <p class="verif-hint">Usulan dari unit/kaprodi menunggu persetujuan. Setujui untuk memublikasikan ke kalender, atau tolak dengan catatan.</p>
-        <div id="verif-list" class="verif-list"></div>
-        <div id="verif-empty" class="verif-empty" style="display:none">Tidak ada usulan yang menunggu verifikasi.</div>
       </div>
     </div>
   </div>

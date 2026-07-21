@@ -87,27 +87,17 @@ async function loadInitialData() {
 function initCalendar() {
   const el = document.getElementById("calendar");
 
+  // Tentukan default filter (tahun ajaran & semester berjalan)
+  const defaultTahun = CONFIG.DEFAULT_TAHUN_AJARAN;
+  const defaultSem   = CONFIG.DEFAULT_SEMESTER;
+
+  // Set filter dropdown ke default
   const selTahun = document.getElementById("filter-tahun");
   const selSem   = document.getElementById("filter-semester");
 
-  // Tentukan tahun ajaran awal, prioritas:
-  //  1) pilihan terakhir user (localStorage) — biar refresh tidak reset
-  //  2) default dari config, jika memang ada di daftar
-  //  3) entri pertama daftar TA (samakan dengan halaman export)
-  const savedTahun = localStorage.getItem("ka_filter_tahun");
-  const savedSem   = localStorage.getItem("ka_filter_semester");
-
-  let initTahun = "";
-  if (savedTahun && State.tahunAjaran.includes(savedTahun)) {
-    initTahun = savedTahun;
-  } else if (State.tahunAjaran.includes(CONFIG.DEFAULT_TAHUN_AJARAN)) {
-    initTahun = CONFIG.DEFAULT_TAHUN_AJARAN;
-  } else {
-    initTahun = State.tahunAjaran[0] || "";
-  }
-
-  selTahun.value = initTahun;
-  selSem.value   = savedSem || CONFIG.DEFAULT_SEMESTER;
+  // Cari apakah default ada di list
+  if (State.tahunAjaran.includes(defaultTahun)) selTahun.value = defaultTahun;
+  selSem.value = defaultSem;
 
   State.filter.tahun    = selTahun.value;
   State.filter.semester = selSem.value;
@@ -145,25 +135,17 @@ function initCalendar() {
   });
 
   State.calendar.render();
-  gotoSemesterStart(State.filter.tahun, State.filter.semester);
   showLoading(false);
 
-  // Filter diterapkan hanya lewat tombol "Terapkan" (bukan on-change),
-  // agar bulan yang tampil selalu cocok dengan filter dan tidak salah baca.
-  const btnApply = document.getElementById("filter-apply");
-  if (btnApply) {
-    btnApply.addEventListener("click", () => {
-      State.filter.tahun    = selTahun.value;
-      State.filter.semester = selSem.value;
-      localStorage.setItem("ka_filter_tahun", selTahun.value);
-      localStorage.setItem("ka_filter_semester", selSem.value);
-
-      // Lompat ke bulan awal semester supaya tampilan sesuai filter
-      gotoSemesterStart(selTahun.value, selSem.value);
-      State.calendar.refetchEvents();
-      showToast(`Menampilkan ${selTahun.value || "semua TA"} — ${selSem.value || "semua semester"}.`, "success");
-    });
-  }
+  // Filter change
+  selTahun.addEventListener("change", () => {
+    State.filter.tahun = selTahun.value;
+    State.calendar.refetchEvents();
+  });
+  selSem.addEventListener("change", () => {
+    State.filter.semester = selSem.value;
+    State.calendar.refetchEvents();
+  });
 }
 
 // ============================================================
@@ -209,22 +191,13 @@ async function fetchCalendarEvents(fetchInfo, successCb, failureCb) {
     });
 
     // Libur nasional (dengan override logic)
-    // Normalisasi ke "YYYY-MM-DD" agar cocok walau API/override memberi
-    // format tanpa zero-pad (mis. "2025-1-1").
-    const normDate = (v) => {
-      if (!v) return "";
-      const s = String(v).slice(0, 10);
-      const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-      if (!m) return s;
-      return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
-    };
     const hideDates = new Set(
-      State.overrides.filter(o => o.action === "hide").map(o => normDate(o.tanggal))
+      State.overrides.filter(o => o.action === "hide").map(o => o.tanggal)
     );
     const addOverrides = State.overrides.filter(o => o.action === "add");
 
     State.holidays.forEach(h => {
-      if (hideDates.has(normDate(h.holiday_date))) return; // di-hide
+      if (hideDates.has(h.holiday_date)) return; // di-hide
       allEvents.push({
         id:        "hol_" + h.holiday_date,
         title:     "🔴 " + h.holiday_name,
@@ -312,37 +285,12 @@ async function doLogout() {
 
 function updateAuthUI() {
   const isLoggedIn = !!State.token;
-  const isAdmin    = isLoggedIn && State.user && State.user.role === "admin_baak";
-
   document.getElementById("state-public").style.display    = isLoggedIn ? "none"  : "flex";
   document.getElementById("state-logged-in").style.display = isLoggedIn ? "flex"  : "none";
   document.getElementById("toolbar-admin").style.display   = isLoggedIn ? "flex"  : "none";
 
-  // Tombol pengelolaan master data & verifikasi khusus admin BAAK
-  const adminOnlyBtns = ["btn-manage-kategori", "btn-export-pdf", "btn-manage-tahun", "btn-manage-override"];
-  adminOnlyBtns.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = isAdmin ? "" : "none";
-  });
-  const verifBtn = document.getElementById("btn-verifikasi");
-  if (verifBtn) verifBtn.style.display = isAdmin ? "" : "none";
-
-  // Kontributor: tombol tambah berubah jadi "Ajukan Kegiatan"
-  const addBtn = document.getElementById("btn-add-event");
-  if (addBtn) {
-    addBtn.innerHTML = isAdmin
-      ? '<span class="iconify" data-icon="mdi:plus"></span> Tambah Kegiatan'
-      : '<span class="iconify" data-icon="mdi:send-outline"></span> Ajukan Kegiatan';
-  }
-
   if (isLoggedIn && State.user) {
-    const badge = document.getElementById("admin-name");
-    if (badge) {
-      badge.textContent = isAdmin
-        ? "Administrator BAAK"
-        : (State.user.nama || State.user.username) + (State.user.unit ? " — " + State.user.unit : "");
-    }
-    if (isAdmin) refreshVerifBadge();
+    document.getElementById("admin-name").textContent = State.user.nama || State.user.username;
   }
 }
 
@@ -351,8 +299,6 @@ function updateAuthUI() {
 // ============================================================
 function setupEventModalHandlers() {
   document.getElementById("btn-add-event").addEventListener("click", () => openEventModal(null, null));
-  const btnVerif = document.getElementById("btn-verifikasi");
-  if (btnVerif) btnVerif.addEventListener("click", openVerifikasi);
   document.getElementById("btn-save-event").addEventListener("click", saveEvent);
   document.getElementById("btn-delete-event").addEventListener("click", () => {
     openConfirm("Yakin ingin menghapus kegiatan ini?", deleteEvent);
@@ -372,11 +318,11 @@ function openEventModal(eventData, dateStr) {
   document.getElementById("event-mulai").value    = isEdit ? eventData.startStr : (dateStr || "");
   document.getElementById("event-deskripsi").value = isEdit ? (eventData.extendedProps?.deskripsi || "") : "";
 
-  // End date: FullCalendar end bersifat eksklusif (+1), kembalikan ke tanggal asli.
-  // Pakai endStr (string "YYYY-MM-DD") + shiftYMD berbasis UTC agar tidak mundur
-  // sehari akibat konversi timezone (WIB = UTC+7).
-  if (isEdit && eventData.endStr) {
-    document.getElementById("event-selesai").value = shiftYMD(eventData.endStr, -1);
+  // End date: FullCalendar end sudah +1, kembalikan ke asli
+  if (isEdit && eventData.end) {
+    const endFixed = new Date(eventData.end);
+    endFixed.setDate(endFixed.getDate() - 1);
+    document.getElementById("event-selesai").value = endFixed.toISOString().slice(0,10);
   } else {
     document.getElementById("event-selesai").value = dateStr || "";
   }
@@ -449,9 +395,8 @@ async function saveEvent() {
     } else if (res.status === "ok") {
       closeModal("modal-event");
       State.calendar.refetchEvents();
-      showToast(res.message || (isEdit ? "Kegiatan berhasil diupdate." : "Kegiatan berhasil ditambahkan."), "success");
+      showToast(isEdit ? "Kegiatan berhasil diupdate." : "Kegiatan berhasil ditambahkan.", "success");
       _hideForceButton();
-      if (State.user && State.user.role === "admin_baak") refreshVerifBadge();
     } else {
       showError(errEl, res.message);
     }
@@ -726,9 +671,9 @@ async function saveOverride() {
   setLoading("btn-save-override", true);
   try {
     const res = await apiPost({
-      action:         "addOverride",  // router backend
+      action:         "addOverride",
       tanggal,
-      ov_action:       action,        // tipe override: "hide" | "add"
+      action:          action,
       nama_pengganti:  nama,
       keterangan:      ket,
       pin,
@@ -1002,193 +947,7 @@ function showToast(msg, type = "success") {
   toast._timer = setTimeout(() => { toast.style.display = "none"; }, 3200);
 }
 
-// ============================================================
-//  VERIFIKASI USULAN (admin BAAK)
-// ============================================================
-async function refreshVerifBadge() {
-  try {
-    const res = await apiPost({ action: "getUsulan" });
-    if (res.status !== "ok") return;
-    const n = (res.data || []).length;
-    const badge = document.getElementById("verif-badge");
-    if (badge) {
-      badge.textContent = n;
-      badge.style.display = n > 0 ? "inline-flex" : "none";
-    }
-  } catch (e) { /* diam saja */ }
-}
-
-async function openVerifikasi() {
-  openModal("modal-verifikasi");
-  const list  = document.getElementById("verif-list");
-  const empty = document.getElementById("verif-empty");
-  list.innerHTML = '<div class="verif-empty">Memuat usulan…</div>';
-  empty.style.display = "none";
-
-  try {
-    const res = await apiPost({ action: "getUsulan" });
-    if (res.status !== "ok") {
-      list.innerHTML = "";
-      empty.textContent = res.message || "Gagal memuat usulan.";
-      empty.style.display = "block";
-      return;
-    }
-    renderVerifList(res.data || []);
-  } catch (e) {
-    list.innerHTML = "";
-    empty.textContent = "Gagal terhubung ke server.";
-    empty.style.display = "block";
-  }
-}
-
-function renderVerifList(usulan) {
-  const list  = document.getElementById("verif-list");
-  const empty = document.getElementById("verif-empty");
-  list.innerHTML = "";
-
-  if (!usulan.length) {
-    empty.textContent = "Tidak ada usulan yang menunggu verifikasi.";
-    empty.style.display = "block";
-    return;
-  }
-  empty.style.display = "none";
-
-  usulan.forEach(u => {
-    const rentang = u.start === u.end
-      ? formatDate(u.start)
-      : `${formatDate(u.start)} – ${formatDate(u.end)}`;
-    const card = document.createElement("div");
-    card.className = "verif-card";
-    card.dataset.id = u.id;
-    card.innerHTML = `
-      <div class="verif-card-top">
-        <span class="verif-dot" style="background:${u.color || "#999"}"></span>
-        <div class="verif-card-main">
-          <div class="verif-card-title">${_esc(u.title)}</div>
-          <div class="verif-card-meta">
-            <strong>${_esc(rentang)}</strong> · ${_esc(u.kategori_nama || "")}<br>
-            ${_esc(u.tahun_ajaran)} — ${_esc(u.semester)} ·
-            diajukan oleh <strong>${_esc(u.pengaju_nama || u.diajukan_oleh)}</strong>${u.unit ? " (" + _esc(u.unit) + ")" : ""}
-          </div>
-          ${u.deskripsi ? `<div class="verif-card-desc">${_esc(u.deskripsi)}</div>` : ""}
-          <div class="verif-card-actions">
-            <button class="btn btn-primary btn-xs" data-act="approve">Setujui</button>
-            <button class="btn btn-secondary btn-xs" data-act="edit">Edit dulu</button>
-            <button class="btn btn-danger btn-xs" data-act="reject-open">Tolak</button>
-          </div>
-          <div class="verif-reject-box">
-            <input type="text" placeholder="Alasan penolakan (opsional)" data-role="reject-note" />
-            <button class="btn btn-danger btn-xs" data-act="reject-confirm">Kirim</button>
-          </div>
-        </div>
-      </div>`;
-
-    card.querySelector('[data-act="approve"]').addEventListener("click", () => approveUsulan(u.id, false));
-    card.querySelector('[data-act="edit"]').addEventListener("click", () => {
-      closeModal("modal-verifikasi");
-      // Buka modal edit dengan data usulan (start/end di sini masih inklusif)
-      openEventModal({
-        id: u.id,
-        title: u.title,
-        startStr: u.start,
-        endStr: shiftYMD(u.end, 1), // openEventModal mengurangi 1 lagi → tampil inklusif
-        extendedProps: {
-          nama_kegiatan: u.title, tahun_ajaran: u.tahun_ajaran, semester: u.semester,
-          deskripsi: u.deskripsi, kategori_id: u.kategori_id
-        }
-      }, null);
-    });
-    const rejectBox = card.querySelector(".verif-reject-box");
-    card.querySelector('[data-act="reject-open"]').addEventListener("click", () => {
-      rejectBox.classList.toggle("show");
-    });
-    card.querySelector('[data-act="reject-confirm"]').addEventListener("click", () => {
-      const note = card.querySelector('[data-role="reject-note"]').value.trim();
-      rejectUsulan(u.id, note);
-    });
-
-    list.appendChild(card);
-  });
-}
-
-async function approveUsulan(id, force) {
-  try {
-    const res = await apiPost({ action: "approveEvent", event_id: id, force: !!force });
-    if (res.status === "conflict") {
-      const list = res.conflicts.map(c => `• ${c.nama} (${c.mulai} s/d ${c.selesai})`).join("\n");
-      if (confirm(`⚠️ ${res.message}\n\n${list}\n\nTetap setujui dan publikasikan?`)) {
-        return approveUsulan(id, true);
-      }
-      return;
-    }
-    if (res.status === "ok") {
-      showToast("Usulan disetujui & dipublikasikan.", "success");
-      _removeVerifCard(id);
-      State.calendar.refetchEvents();
-      refreshVerifBadge();
-    } else {
-      showToast(res.message || "Gagal menyetujui.", "error");
-    }
-  } catch (e) { showToast("Gagal terhubung ke server.", "error"); }
-}
-
-async function rejectUsulan(id, catatan) {
-  try {
-    const res = await apiPost({ action: "rejectEvent", event_id: id, catatan });
-    if (res.status === "ok") {
-      showToast("Usulan ditolak.", "success");
-      _removeVerifCard(id);
-      refreshVerifBadge();
-    } else {
-      showToast(res.message || "Gagal menolak.", "error");
-    }
-  } catch (e) { showToast("Gagal terhubung ke server.", "error"); }
-}
-
-function _removeVerifCard(id) {
-  const card = document.querySelector(`.verif-card[data-id="${id}"]`);
-  if (card) card.remove();
-  const remaining = document.querySelectorAll(".verif-card").length;
-  if (remaining === 0) {
-    const empty = document.getElementById("verif-empty");
-    empty.textContent = "Tidak ada usulan yang menunggu verifikasi.";
-    empty.style.display = "block";
-  }
-}
-
-function _esc(s) {
-  return String(s == null ? "" : s)
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-}
-
 function formatDate(date) {
   const d = new Date(date);
   return d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
-}
-
-// Geser tanggal string "YYYY-MM-DD" sebanyak `delta` hari, aman timezone.
-// Dibangun & dibaca sama-sama di UTC, jadi offset WIB tidak pernah bocor.
-function shiftYMD(ymd, delta) {
-  if (!ymd) return ymd;
-  const [y, m, d] = String(ymd).slice(0, 10).split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d));
-  dt.setUTCDate(dt.getUTCDate() + delta);
-  return dt.toISOString().slice(0, 10);
-}
-
-// Arahkan tampilan kalender ke bulan awal semester terpilih.
-// TA "2026/2027": Ganjil -> September 2026, Genap -> Februari 2027.
-function gotoSemesterStart(tahun, semester) {
-  if (!State.calendar || !tahun) return;
-  const parts = String(tahun).split("/").map(Number);
-  const startYear = parts[0];
-  const endYear   = parts[1] || startYear;
-  let target;
-  if (semester === "Genap") {
-    target = new Date(endYear, 1, 1);   // Februari
-  } else {
-    target = new Date(startYear, 8, 1); // September (default/Ganjil)
-  }
-  if (!isNaN(target.getTime())) State.calendar.gotoDate(target);
 }
